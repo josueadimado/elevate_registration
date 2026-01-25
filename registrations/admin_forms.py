@@ -203,6 +203,10 @@ class AdminEditPricingForm(forms.ModelForm):
         # Set choices for select fields
         self.fields['enrollment_type'].choices = PricingConfig._meta.get_field('enrollment_type').choices
         self.fields['currency'].choices = [('USD', 'USD'), ('NGN', 'NGN')]
+        
+        # Set default currency if this is a new form (no instance)
+        if not self.instance.pk:
+            self.fields['currency'].initial = 'USD'
 
 
 class AdminEditProgramSettingsForm(forms.ModelForm):

@@ -1962,8 +1962,11 @@ tbody tr:hover {
 /* Ensure currency select field is visible */
 .form-group select[id*="currency"],
 .form-fieldset select[id*="currency"],
-.admin-edit-form select[id*="currency"] {
-  border: 1px solid hsl(var(--admin-border)) !important;
+.admin-edit-form select[id*="currency"],
+.form-group select[name="currency"],
+.form-fieldset select[name="currency"],
+.admin-edit-form select[name="currency"] {
+  border: 2px solid hsl(var(--admin-border)) !important;
   border-radius: 8px !important;
   padding: 12px 16px !important;
   padding-right: 40px !important;
@@ -1973,10 +1976,37 @@ tbody tr:hover {
   width: 100% !important;
   box-sizing: border-box !important;
   font-size: var(--font-size-base) !important;
+  font-family: inherit !important;
   line-height: 1.5 !important;
   visibility: visible !important;
   opacity: 1 !important;
   display: block !important;
+  cursor: pointer !important;
+  transition: all var(--transition-base) !important;
+  appearance: auto !important;
+  -webkit-appearance: menulist !important;
+  -moz-appearance: menulist !important;
+}
+
+.form-group select[id*="currency"]:hover,
+.form-fieldset select[id*="currency"]:hover,
+.admin-edit-form select[id*="currency"]:hover,
+.form-group select[name="currency"]:hover,
+.form-fieldset select[name="currency"]:hover,
+.admin-edit-form select[name="currency"]:hover {
+  border-color: hsl(var(--admin-primary)) !important;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.05) !important;
+}
+
+.form-group select[id*="currency"]:focus,
+.form-fieldset select[id*="currency"]:focus,
+.admin-edit-form select[id*="currency"]:focus,
+.form-group select[name="currency"]:focus,
+.form-fieldset select[name="currency"]:focus,
+.admin-edit-form select[name="currency"]:focus {
+  outline: none !important;
+  border-color: hsl(var(--admin-primary)) !important;
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.12) !important;
 }
 
 /* Date input styling - ensure visible borders */

@@ -39,10 +39,15 @@
           
           <div class="form-group">
             <label for="{{ form.currency.id_for_label }}">{{ form.currency.label }}</label>
-            {{ form.currency }}
+            <div style="position: relative;">
+              {{ form.currency }}
+            </div>
             {% if form.currency.errors %}
               <div class="form-error">{{ form.currency.errors }}</div>
             {% endif %}
+            <small style="display: block; margin-top: 6px; color: #86868b; font-size: 13px;">
+              Select the currency for this pricing configuration
+            </small>
           </div>
           
           <div class="form-group">
@@ -133,7 +138,17 @@
 <script>
   // Update currency symbols when currency changes
   document.addEventListener('DOMContentLoaded', function() {
-    const currencyField = document.getElementById('{{ form.currency.id_for_label }}');
+    // Try multiple ways to find the currency field
+    let currencyField = document.getElementById('{{ form.currency.id_for_label }}');
+    if (!currencyField) {
+      // Fallback: try to find by name attribute
+      currencyField = document.querySelector('select[name="currency"]');
+    }
+    if (!currencyField) {
+      // Another fallback: find by ID pattern
+      currencyField = document.querySelector('select[id*="currency"]');
+    }
+    
     const currencySymbolRegistration = document.getElementById('currency-symbol-registration');
     const currencySymbolCourse = document.getElementById('currency-symbol-course');
     const registrationFeeField = document.getElementById('{{ form.registration_fee.id_for_label }}');
@@ -142,27 +157,40 @@
     
     // Function to update currency symbols
     function updateCurrencySymbols(currency) {
-      const symbol = currency === 'NGN' ? '₦' : '$';
-      if (currencySymbolRegistration) currencySymbolRegistration.textContent = symbol;
-      if (currencySymbolCourse) currencySymbolCourse.textContent = symbol;
+      if (!currency) return;
       
-      // Update total amount display if it exists
+      const symbol = currency === 'NGN' ? '₦' : '$';
+      if (currencySymbolRegistration) {
+        currencySymbolRegistration.textContent = symbol;
+      }
+      if (currencySymbolCourse) {
+        currencySymbolCourse.textContent = symbol;
+      }
+      
+      // Update total amount display if it exists (only when editing existing pricing)
       {% if pricing %}
       if (totalAmountDisplay) {
         const totalAmount = parseFloat('{{ pricing.total_amount|floatformat:2 }}');
-        totalAmountDisplay.textContent = symbol + totalAmount.toFixed(2);
+        if (!isNaN(totalAmount)) {
+          totalAmountDisplay.textContent = symbol + totalAmount.toFixed(2);
+        }
       }
       {% endif %}
     }
     
+    // Set initial padding for inputs with currency symbols
+    if (registrationFeeField) {
+      registrationFeeField.style.paddingLeft = '32px';
+    }
+    if (courseFeeField) {
+      courseFeeField.style.paddingLeft = '32px';
+    }
+    
     if (currencyField) {
-      // Set initial padding for inputs with currency symbols
-      if (registrationFeeField) {
-        registrationFeeField.style.paddingLeft = '32px';
-      }
-      if (courseFeeField) {
-        courseFeeField.style.paddingLeft = '32px';
-      }
+      // Make sure the currency field is visible and styled
+      currencyField.style.display = 'block';
+      currencyField.style.visibility = 'visible';
+      currencyField.style.opacity = '1';
       
       // Update on change
       currencyField.addEventListener('change', function() {
@@ -172,7 +200,19 @@
       // Set initial value if field has a value
       if (currencyField.value) {
         updateCurrencySymbols(currencyField.value);
+      } else {
+        // Default to USD if no value is set
+        updateCurrencySymbols('USD');
       }
+      
+      // Also listen for input events (for programmatic changes)
+      currencyField.addEventListener('input', function() {
+        updateCurrencySymbols(this.value);
+      });
+    } else {
+      console.warn('Currency field not found. Make sure the form field has the correct ID.');
+      // Fallback: update symbols based on default
+      updateCurrencySymbols('USD');
     }
   });
 </script>
