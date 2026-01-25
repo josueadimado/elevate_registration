@@ -218,7 +218,16 @@ class PricingConfig(models.Model):
     )
     registration_fee = models.DecimalField(max_digits=10, decimal_places=2, help_text="Registration fee amount")
     course_fee = models.DecimalField(max_digits=10, decimal_places=2, help_text="Course fee amount")
-    currency = models.CharField(max_length=3, default='USD')
+    CURRENCY_CHOICES = [
+        ('USD', 'USD - US Dollar'),
+        ('NGN', 'NGN - Nigerian Naira'),
+    ]
+    currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY_CHOICES,
+        default='USD',
+        help_text="Currency for this pricing configuration"
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

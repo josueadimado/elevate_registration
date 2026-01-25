@@ -39,14 +39,14 @@
           
           <div class="form-group">
             <label for="{{ form.currency.id_for_label }}">{{ form.currency.label }}</label>
-            <div style="position: relative;">
+            <div style="position: relative; display: block;">
               {{ form.currency }}
             </div>
             {% if form.currency.errors %}
               <div class="form-error">{{ form.currency.errors }}</div>
             {% endif %}
             <small style="display: block; margin-top: 6px; color: #86868b; font-size: 13px;">
-              Select the currency for this pricing configuration
+              Select the currency for this pricing configuration (USD or NGN)
             </small>
           </div>
           

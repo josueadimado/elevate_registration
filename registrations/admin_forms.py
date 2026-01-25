@@ -202,7 +202,21 @@ class AdminEditPricingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Set choices for select fields
         self.fields['enrollment_type'].choices = PricingConfig._meta.get_field('enrollment_type').choices
-        self.fields['currency'].choices = [('USD', 'USD'), ('NGN', 'NGN')]
+        
+        # Explicitly set currency field as Select widget with choices
+        from django import forms
+        self.fields['currency'].widget = forms.Select(attrs={
+            'class': 'admin-form-input',
+        })
+        # Use model choices if available, otherwise use default
+        currency_field = PricingConfig._meta.get_field('currency')
+        if hasattr(currency_field, 'choices') and currency_field.choices:
+            self.fields['currency'].choices = currency_field.choices
+        else:
+            self.fields['currency'].choices = [
+                ('USD', 'USD - US Dollar'),
+                ('NGN', 'NGN - Nigerian Naira'),
+            ]
         
         # Set default currency if this is a new form (no instance)
         if not self.instance.pk:
