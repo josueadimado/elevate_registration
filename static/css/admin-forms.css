@@ -1,0 +1,287 @@
+/* Django Admin Form Enhancements - Apple-inspired */
+/* This file enhances Django admin forms to match our Apple-inspired design */
+
+/* Override Django admin base styles */
+#content {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Form Rows */
+.form-row {
+  border-bottom: 1px solid #d2d2d7 !important;
+  padding: 20px 0 !important;
+  margin-bottom: 0 !important;
+  overflow: visible !important;
+}
+
+.form-row:last-child {
+  border-bottom: none !important;
+}
+
+/* Fieldsets */
+fieldset {
+  border: 1px solid #d2d2d7 !important;
+  border-radius: 12px !important;
+  padding: 24px !important;
+  margin-bottom: 24px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+fieldset legend {
+  font-weight: 600 !important;
+  font-size: 1.125rem !important;
+  color: #1d1d1f !important;
+  padding: 0 12px !important;
+  letter-spacing: -0.01em !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+}
+
+/* Labels */
+.aligned label {
+  font-weight: 500 !important;
+  color: #1d1d1f !important;
+  font-size: 1rem !important;
+  min-width: 180px !important;
+  width: 180px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+}
+
+/* Input Fields - Comprehensive coverage of all input types */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="tel"],
+input[type="password"],
+input[type="url"],
+input[type="search"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"],
+input[type="color"],
+textarea,
+select,
+.vTextField {
+  border: 1px solid #d2d2d7 !important;
+  border-radius: 8px !important;
+  padding: 10px 14px !important;
+  font-size: 1rem !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  background: #ffffff !important;
+  color: #1d1d1f !important;
+  min-height: 44px !important;
+  box-sizing: border-box !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+input[type="password"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="time"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus,
+input[type="color"]:focus,
+textarea:focus,
+select:focus,
+.vTextField:focus {
+  outline: none !important;
+  border-color: #0071e3 !important;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1) !important;
+}
+
+/* Select Dropdowns */
+select {
+  height: 44px !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231d1d1f' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  padding-right: 36px !important;
+}
+
+/* Textareas */
+textarea {
+  min-height: 120px !important;
+  resize: vertical !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+}
+
+/* Checkboxes and Radio Buttons */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px !important;
+  height: 18px !important;
+  cursor: pointer !important;
+  accent-color: #0071e3 !important;
+}
+
+/* Submit Row */
+.submit-row {
+  background: #ffffff !important;
+  border: 1px solid #d2d2d7 !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  margin-top: 24px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.submit-row input[type="submit"],
+.submit-row .button,
+.submit-row a.button {
+  background: #0071e3 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 10px 20px !important;
+  font-weight: 500 !important;
+  font-size: 1rem !important;
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+}
+
+.submit-row input[type="submit"]:hover,
+.submit-row .button:hover,
+.submit-row a.button:hover {
+  background: #0077ed !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.2) !important;
+}
+
+.submit-row input[type="submit"].default {
+  background: #0071e3 !important;
+}
+
+.submit-row input[type="submit"].default:hover {
+  background: #0077ed !important;
+}
+
+/* Help Text */
+.help {
+  font-size: 0.875rem !important;
+  color: #86868b !important;
+  margin-top: 6px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+}
+
+/* Error Messages */
+.errorlist {
+  background: rgba(255, 59, 48, 0.1) !important;
+  color: #ff3b30 !important;
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 59, 48, 0.2) !important;
+  margin-top: 8px !important;
+  list-style: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+}
+
+.errorlist li {
+  margin: 4px 0 !important;
+}
+
+/* Readonly Fields */
+.readonly {
+  padding: 10px 14px !important;
+  background: #f5f5f7 !important;
+  border-radius: 8px !important;
+  color: #86868b !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+}
+
+/* Related Field Widgets */
+.related-widget-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.related-widget-wrapper-link {
+  padding: 8px 12px !important;
+  background: #0071e3 !important;
+  color: white !important;
+  border-radius: 8px !important;
+  text-decoration: none !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.related-widget-wrapper-link:hover {
+  background: #0077ed !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Date/Time Pickers */
+.calendarbox,
+.clockbox {
+  border: 1px solid #d2d2d7 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Inline Forms */
+.inline-group {
+  border: 1px solid #d2d2d7 !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  margin-bottom: 24px !important;
+  background: #ffffff !important;
+}
+
+.inline-group h2 {
+  font-weight: 600 !important;
+  font-size: 1.125rem !important;
+  color: #1d1d1f !important;
+  letter-spacing: -0.01em !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+}
+
+/* Collapsible Fieldsets */
+.collapse {
+  border: 1px solid #d2d2d7 !important;
+  border-radius: 12px !important;
+  margin-bottom: 24px !important;
+}
+
+.collapse summary {
+  padding: 16px 20px !important;
+  background: #f5f5f7 !important;
+  border-radius: 12px 12px 0 0 !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  color: #1d1d1f !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+}
+
+.collapse summary:hover {
+  background: #e5e5e7 !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .aligned label {
+    min-width: 100% !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+  
+  fieldset {
+    padding: 16px !important;
+  }
+  
+  .form-row {
+    padding: 16px 0 !important;
+  }
+}

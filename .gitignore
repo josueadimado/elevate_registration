@@ -27,7 +27,7 @@ db.sqlite3
 db.sqlite3-journal
 /media
 /staticfiles
-/static
+# Note: /static is NOT ignored - we need to commit static files for deployment
 
 # Environment variables
 .env
