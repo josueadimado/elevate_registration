@@ -3,7 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}ASPIR Mentorship Program{% endblock %}</title>
+  
+  <!-- Primary Meta Tags -->
+  <title>{% block title %}ASPIR Mentorship Program{% endblock %} | Elevate Tribe Analytics</title>
+  <meta name="title" content="{% block meta_title %}ASPIR Mentorship Program - A Journey to Purpose, Excellence & Leadership{% endblock %}" />
+  <meta name="description" content="{% block meta_description %}Join the ASPIR Mentorship Program - A structured journey through five dimensions: Academic Excellence, Spiritual Growth, Purpose Discovery, Impactful Leadership, and Refined Communication. Enroll now for ages 10-22.{% endblock %}" />
+  <meta name="keywords" content="{% block meta_keywords %}mentorship program, youth mentorship, leadership development, academic excellence, spiritual growth, purpose discovery, communication skills, youth education, Nigeria mentorship, Elevate Tribe Analytics{% endblock %}" />
+  <meta name="author" content="Elevate Tribe Analytics" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="English" />
+  <meta name="revisit-after" content="7 days" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="{% block og_url %}https://register.elevatetribelearning.com{% endblock %}" />
+  <meta property="og:title" content="{% block og_title %}ASPIR Mentorship Program - Elevate Tribe Analytics{% endblock %}" />
+  <meta property="og:description" content="{% block og_description %}A structured mentorship journey through five dimensions: Academic Excellence, Spiritual Growth, Purpose Discovery, Impactful Leadership, and Refined Communication.{% endblock %}" />
+  <meta property="og:image" content="{% block og_image %}{% load static %}{% static 'images/Elevate-Tribe-Bg-Remover.png' %}{% endblock %}" />
+  <meta property="og:site_name" content="ASPIR Mentorship Program" />
+  <meta property="og:locale" content="en_US" />
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="{% block twitter_url %}https://register.elevatetribelearning.com{% endblock %}" />
+  <meta name="twitter:title" content="{% block twitter_title %}ASPIR Mentorship Program{% endblock %}" />
+  <meta name="twitter:description" content="{% block twitter_description %}A structured mentorship journey to Purpose, Excellence & Leadership for ages 10-22.{% endblock %}" />
+  <meta name="twitter:image" content="{% block twitter_image %}{% load static %}{% static 'images/Elevate-Tribe-Bg-Remover.png' %}{% endblock %}" />
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="{% block canonical_url %}https://register.elevatetribelearning.com{% endblock %}" />
+  
+  <!-- Favicon -->
+  {% load static %}
+  <link rel="icon" type="image/png" href="{% static 'images/Elevate-Tribe-Bg-Remover.png' %}" />
+  
+  <!-- Preconnect for Performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -215,6 +249,38 @@
   </div>
   
   {% block content %}{% endblock %}
+  
+  <!-- Structured Data (JSON-LD) for SEO -->
+  {% block structured_data %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "ASPIR Mentorship Program",
+    "alternateName": "ASPIR",
+    "description": "A structured mentorship journey through five dimensions: Academic Excellence, Spiritual Growth, Purpose Discovery, Impactful Leadership, and Refined Communication.",
+    "url": "https://register.elevatetribelearning.com",
+    "logo": "https://register.elevatetribelearning.com{% load static %}{% static 'images/Elevate-Tribe-Bg-Remover.png' %}",
+    "sameAs": [
+      "https://www.facebook.com/elevatetribelearning",
+      "https://www.instagram.com/elevatetribelearning"
+    ],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "Customer Service",
+      "email": "info@elevatetribelearning.com"
+    },
+    "offers": {
+      "@type": "Offer",
+      "name": "ASPIR Mentorship Program Enrollment",
+      "description": "Mentorship program for ages 10-22",
+      "priceCurrency": "NGN",
+      "availability": "https://schema.org/InStock"
+    }
+  }
+  </script>
+  {% endblock %}
+  
   <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
   
   <script>

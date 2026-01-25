@@ -1,0 +1,11 @@
+# robots.txt for ASPIR Mentorship Program
+User-agent: *
+Allow: /
+Allow: /register/
+Allow: /check-status/
+Disallow: /admin/
+Disallow: /admin-panel/
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://register.elevatetribelearning.com/sitemap.xml
