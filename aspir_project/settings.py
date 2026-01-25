@@ -132,11 +132,15 @@ LOGOUT_REDIRECT_URL = '/admin-panel/login/'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+# Media files (for user uploads if needed)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Optimize static files finders for faster startup
 # Only use necessary finders in development
@@ -153,7 +157,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Squad Payment Configuration
 SQUAD_SECRET_KEY = config('SQUAD_SECRET_KEY', default='')
 SQUAD_PUBLIC_KEY = config('SQUAD_PUBLIC_KEY', default='')
-SQUAD_BASE_URL = config('SQUAD_BASE_URL', default='https://sandbox-api-d.squadco.com')  # Use https://api-d.squadco.com for production
+# Use production URL for live site, sandbox for testing
+SQUAD_BASE_URL = config('SQUAD_BASE_URL', default='https://api-d.squadco.com' if not DEBUG else 'https://sandbox-api-d.squadco.com')
 # USD to NGN exchange rate (fallback if API fails)
 USD_TO_NGN_RATE = config('USD_TO_NGN_RATE', default=1500.0, cast=float)  # Fallback rate
 
@@ -168,20 +173,34 @@ CACHES = {
 
 # CORS Settings (for API endpoints)
 CORS_ALLOWED_ORIGINS = [
+    "https://register.elevatetribelearning.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+
+# Allow all origins in development (for testing)
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 
 # Security settings for production
 if not DEBUG:
+    # HTTPS/SSL Security
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # For PythonAnywhere
+    
+    # HSTS (HTTP Strict Transport Security)
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    
+    # Additional security headers
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
 else:
     # Development settings - suppress security warnings
     # These warnings are expected in development and safe to ignore
@@ -249,3 +268,6 @@ SERVER_EMAIL = config('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
 
 # Support email (for contact information)
 SUPPORT_EMAIL = config('SUPPORT_EMAIL', default='info@elevatetribeanalytics.com')
+
+# Site URL for email links and absolute URLs
+SITE_URL = config('SITE_URL', default='https://register.elevatetribelearning.com' if not DEBUG else 'http://localhost:8000')
