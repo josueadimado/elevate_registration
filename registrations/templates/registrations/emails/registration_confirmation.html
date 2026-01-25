@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Confirmed - ASPIR Program</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1d1d1f;
+            background-color: #f5f5f7;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .email-header {
+            background: linear-gradient(135deg, #0071e3, #ff6b35);
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .email-header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .email-content {
+            padding: 40px 30px;
+        }
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            background: #34c759;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 32px;
+            color: white;
+        }
+        .info-box {
+            background: rgba(0, 113, 227, 0.08);
+            border: 1px solid rgba(0, 113, 227, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+        }
+        .payment-summary {
+            background: #f5f5f7;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+        }
+        .payment-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .payment-row:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            font-size: 18px;
+            padding-top: 16px;
+            margin-top: 8px;
+            border-top: 2px solid #0071e3;
+        }
+        .btn {
+            display: inline-block;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #0071e3, #ff6b35);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            margin: 24px 0;
+            text-align: center;
+        }
+        .footer {
+            background: #1d1d1f;
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #ff6b35;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>Registration Confirmed!</h1>
+        </div>
+        
+        <div class="email-content">
+            <div class="success-icon">✓</div>
+            
+            <h2 style="color: #1d1d1f; font-size: 24px; margin-bottom: 16px;">Hello {{ registration.full_name }},</h2>
+            
+            <p style="color: #64748b; font-size: 16px; margin-bottom: 24px;">
+                Thank you for registering for the ASPIR Mentorship Program! Your registration fee has been received and your registration is confirmed.
+            </p>
+            
+            <div class="info-box">
+                <h3 style="color: #1d1d1f; font-size: 18px; margin-top: 0; margin-bottom: 16px;">Your Registration Details</h3>
+                <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Name:</strong> {{ registration.full_name }}</p>
+                <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Email:</strong> {{ registration.email }}</p>
+                <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Cohort:</strong> {% if registration.cohort %}{{ registration.cohort.name }}{% else %}N/A{% endif %}</p>
+                <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Group:</strong> {{ registration.get_group_display }}</p>
+                <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Learning Path:</strong> {% if registration.dimension %}{{ registration.dimension.name }}{% else %}N/A{% endif %}</p>
+                <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Reference:</strong> {{ registration.squad_reference|default:registration.paystack_reference }}</p>
+            </div>
+            
+            <div class="payment-summary">
+                <h3 style="color: #1d1d1f; font-size: 18px; margin-top: 0; margin-bottom: 16px;">Payment Summary</h3>
+                
+                <div class="payment-row">
+                    <span style="color: #64748b;">Registration Fee:</span>
+                    <div style="text-align: right;">
+                        <span style="color: #34c759; font-weight: 600;">✓ Paid: ${{ registration.registration_fee_amount|default:registration.get_registration_fee|floatformat:2 }}</span>
+                        <div style="font-size: 12px; color: #86868b;">≈ ₦{{ reg_fee_ngn|floatformat:0 }}</div>
+                    </div>
+                </div>
+                
+                <div class="payment-row">
+                    <span style="color: #64748b;">Course Fee:</span>
+                    <div style="text-align: right;">
+                        <span style="color: #ff6b35; font-weight: 600;">Pending: ${{ registration.course_fee_amount|default:registration.get_course_fee|floatformat:2 }}</span>
+                        <div style="font-size: 12px; color: #86868b;">≈ ₦{{ course_fee_ngn|floatformat:0 }}</div>
+                    </div>
+                </div>
+                
+                <div class="payment-row">
+                    <span style="color: #1d1d1f;">Remaining Balance:</span>
+                    <div style="text-align: right;">
+                        <span style="color: #ff6b35; font-weight: 700;">${{ registration.get_remaining_balance|floatformat:2 }}</span>
+                        <div style="font-size: 13px; color: #86868b;">≈ ₦{{ remaining_ngn|floatformat:0 }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if not registration.is_fully_paid %}
+            <div style="background: rgba(255, 107, 53, 0.1); border: 2px solid rgba(255, 107, 53, 0.2); border-radius: 12px; padding: 20px; margin: 24px 0;">
+                <h3 style="color: #1d1d1f; font-size: 18px; margin-top: 0; margin-bottom: 12px;">Complete Your Enrollment</h3>
+                <p style="color: #64748b; margin-bottom: 20px;">
+                    To complete your enrollment, please pay the remaining course fee of <strong style="color: #ff6b35;">${{ registration.get_remaining_balance|floatformat:2 }}</strong> (≈ ₦{{ remaining_ngn|floatformat:0 }}).
+                </p>
+                <a href="{{ check_status_url }}" class="btn" style="display: block; text-align: center; margin-bottom: 12px;">
+                    Complete Payment Now
+                </a>
+                <p style="font-size: 12px; color: #86868b; margin: 0; text-align: center; line-height: 1.5;">
+                    <strong>Tip:</strong> You can return anytime to complete your payment by visiting <a href="{{ check_status_url }}" style="color: #0071e3; text-decoration: none;">the status check page</a> with your email or reference number: <strong style="color: #0071e3;">{{ registration.squad_reference|default:registration.paystack_reference }}</strong>
+                </p>
+            </div>
+            {% endif %}
+            
+            <div class="info-box" style="margin-top: 32px;">
+                <h3 style="color: #1d1d1f; font-size: 18px; margin-top: 0; margin-bottom: 12px;">What Happens Next?</h3>
+                <ul style="color: #64748b; padding-left: 20px;">
+                    <li style="margin-bottom: 8px;">You'll receive program start date and schedule information via email once your cohort is finalized</li>
+                    <li style="margin-bottom: 8px;">You'll be added to your cohort's communication channel</li>
+                    <li style="margin-bottom: 8px;">You'll receive access to learning materials before the program begins</li>
+                    {% if not registration.is_fully_paid %}
+                    <li style="margin-bottom: 8px;">Complete your payment to finalize your enrollment</li>
+                    {% endif %}
+                </ul>
+            </div>
+            
+            <p style="color: #64748b; font-size: 14px; margin-top: 32px;">
+                <strong style="color: #1d1d1f;">Payment Currency Note:</strong> Your payment was processed in Nigerian Naira (₦). The USD amounts shown are for reference. Exchange rate: 1 USD = ₦{{ exchange_rate|floatformat:2 }}.
+            </p>
+            
+            <p style="color: #64748b; font-size: 14px; margin-top: 24px;">
+                If you have any questions, please contact us at <a href="mailto:{{ support_email }}" style="color: #0071e3;">{{ support_email }}</a> or call (+233) 20 956 9399.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p style="margin: 0 0 8px 0;">© {% now "Y" %} Elevate Tribe Analytics. All rights reserved.</p>
+            <p style="margin: 0; font-size: 12px; opacity: 0.8;">
+                <a href="https://elevatetribeanalytics.com">elevatetribeanalytics.com</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

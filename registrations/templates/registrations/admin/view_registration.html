@@ -1,0 +1,488 @@
+{% extends 'registrations/admin/base.html' %}
+{% load static %}
+
+{% block page_title %}{{ page_title|default:'View Registration' }}{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+  <div class="edit-form-container">
+    <div class="edit-form-header" style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid #f5f5f7;">
+      <div>
+        <h2 style="font-size: 32px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 12px; color: #1d1d1f; display: flex; align-items: center; gap: 12px;">
+          <iconify-icon icon="lucide:file-text" style="font-size: 32px; color: #0071e3;"></iconify-icon>
+          {{ page_title|default:'View Registration' }}
+        </h2>
+        {% if registration %}
+        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <p style="color: #64748b; font-size: 14px; margin: 0; display: flex; align-items: center; gap: 6px;">
+            <iconify-icon icon="lucide:hash" style="font-size: 14px;"></iconify-icon>
+            <span style="font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;">{{ registration.id }}</span>
+          </p>
+          {% if registration.status == 'PAID' %}
+            <span class="badge badge-success" style="padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;">
+              <iconify-icon icon="lucide:check-circle" style="font-size: 14px; vertical-align: middle; margin-right: 4px;"></iconify-icon>
+              Fully Paid
+            </span>
+          {% elif registration.status == 'PENDING' %}
+            <span class="badge badge-warning" style="padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;">
+              <iconify-icon icon="lucide:clock" style="font-size: 14px; vertical-align: middle; margin-right: 4px;"></iconify-icon>
+              Pending Payment
+            </span>
+          {% else %}
+            <span class="badge badge-danger" style="padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;">
+              <iconify-icon icon="lucide:alert-circle" style="font-size: 14px; vertical-align: middle; margin-right: 4px;"></iconify-icon>
+              Failed
+            </span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 20px;">
+        <a href="{% url 'edit_registration' registration.id %}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; font-weight: 600; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 113, 227, 0.2);">
+          <iconify-icon icon="lucide:edit" style="font-size: 18px;"></iconify-icon>
+          Edit
+        </a>
+        <a href="{% url 'admin_registrations' %}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; font-weight: 600; border-radius: 12px;">
+          <iconify-icon icon="lucide:arrow-left" style="font-size: 18px;"></iconify-icon>
+          Back to List
+        </a>
+      </div>
+    </div>
+
+    <div class="view-details-container">
+      <!-- Student Information -->
+      <fieldset class="form-fieldset">
+        <legend>
+          <iconify-icon icon="lucide:user" style="font-size: 18px;"></iconify-icon>
+          Student Information
+        </legend>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Full Name</label>
+            <div class="view-field">{{ registration.full_name }}</div>
+          </div>
+          
+          <div class="form-group">
+            <label>Email</label>
+            <div class="view-field">
+              <a href="mailto:{{ registration.email }}" style="color: #0071e3; text-decoration: none;">{{ registration.email }}</a>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Phone</label>
+            <div class="view-field">
+              <a href="tel:{{ registration.phone }}" style="color: #0071e3; text-decoration: none;">{{ registration.phone }}</a>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Country</label>
+            <div class="view-field">{{ registration.country|default:"-" }}</div>
+          </div>
+          
+          <div class="form-group">
+            <label>Age</label>
+            <div class="view-field">{{ registration.age|default:"-" }}</div>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Program Selection -->
+      <fieldset class="form-fieldset">
+        <legend>
+          <iconify-icon icon="lucide:book-open" style="font-size: 18px;"></iconify-icon>
+          Program Selection
+        </legend>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Group</label>
+            <div class="view-field">
+              <span class="badge badge-info">{{ registration.get_group_display }}</span>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Cohort</label>
+            <div class="view-field">
+              {% if registration.cohort %}
+                <span class="badge badge-info">{{ registration.cohort.name }}</span>
+              {% else %}
+                <span style="color: #86868b;">{{ registration.get_cohort_display|default:"-" }}</span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Dimension</label>
+            <div class="view-field">
+              {% if registration.dimension %}
+                <span class="badge badge-info">{{ registration.dimension.code }}: {{ registration.dimension.name }}</span>
+              {% else %}
+                <span style="color: #86868b;">{{ registration.get_dimension_display|default:"-" }}</span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Enrollment Type</label>
+            <div class="view-field">
+              <span class="badge badge-info">{{ registration.get_enrollment_type_display }}</span>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Guardian Information -->
+      <fieldset class="form-fieldset">
+        <legend>
+          <iconify-icon icon="lucide:users" style="font-size: 18px;"></iconify-icon>
+          Guardian Information
+        </legend>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Guardian Name</label>
+            <div class="view-field">{{ registration.guardian_name|default:"-" }}</div>
+          </div>
+          
+          <div class="form-group">
+            <label>Guardian Phone</label>
+            <div class="view-field">
+              {% if registration.guardian_phone %}
+                <a href="tel:{{ registration.guardian_phone }}" style="color: #0071e3; text-decoration: none;">{{ registration.guardian_phone }}</a>
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Payment Information -->
+      <fieldset class="form-fieldset">
+        <legend>
+          <iconify-icon icon="lucide:credit-card" style="font-size: 18px;"></iconify-icon>
+          Payment Information
+        </legend>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Status</label>
+            <div class="view-field">
+              {% if registration.status == 'PAID' %}
+                <span class="badge badge-success">Paid</span>
+              {% elif registration.status == 'PENDING' %}
+                <span class="badge badge-warning">Pending</span>
+              {% else %}
+                <span class="badge badge-danger">Failed</span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Registration Fee</label>
+            <div class="view-field">
+              {% if registration.registration_fee_paid %}
+                <span style="color: #34c759; font-weight: 600;">
+                  <iconify-icon icon="lucide:check-circle" style="font-size: 16px; vertical-align: middle;"></iconify-icon>
+                  Paid: ${{ registration.registration_fee_amount|default:registration.get_registration_fee|floatformat:2 }}
+                </span>
+                {% if exchange_rate %}
+                <div style="font-size: 12px; color: #86868b; margin-top: 4px;">
+                  ≈ ₦{{ reg_fee_ngn|floatformat:0 }}
+                </div>
+                {% endif %}
+              {% else %}
+                <span style="color: #ff6b35; font-weight: 600;">
+                  <iconify-icon icon="lucide:clock" style="font-size: 16px; vertical-align: middle;"></iconify-icon>
+                  Pending: ${{ registration.registration_fee_amount|default:registration.get_registration_fee|floatformat:2 }}
+                </span>
+                {% if exchange_rate %}
+                <div style="font-size: 12px; color: #86868b; margin-top: 4px;">
+                  ≈ ₦{{ reg_fee_ngn|floatformat:0 }}
+                </div>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Course Fee</label>
+            <div class="view-field">
+              {% if registration.course_fee_paid %}
+                <span style="color: #34c759; font-weight: 600;">
+                  <iconify-icon icon="lucide:check-circle" style="font-size: 16px; vertical-align: middle;"></iconify-icon>
+                  Paid: ${{ registration.course_fee_amount|default:registration.get_course_fee|floatformat:2 }}
+                </span>
+                {% if exchange_rate %}
+                <div style="font-size: 12px; color: #86868b; margin-top: 4px;">
+                  ≈ ₦{{ course_fee_ngn|floatformat:0 }}
+                </div>
+                {% endif %}
+              {% else %}
+                <span style="color: #ff6b35; font-weight: 600;">
+                  <iconify-icon icon="lucide:clock" style="font-size: 16px; vertical-align: middle;"></iconify-icon>
+                  Pending: ${{ registration.course_fee_amount|default:registration.get_course_fee|floatformat:2 }}
+                </span>
+                {% if exchange_rate %}
+                <div style="font-size: 12px; color: #86868b; margin-top: 4px;">
+                  ≈ ₦{{ course_fee_ngn|floatformat:0 }}
+                </div>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Total Amount</label>
+            <div class="view-field" style="font-size: 18px; font-weight: 700; color: #0071e3;">
+              ${{ registration.amount|floatformat:2 }}
+              {% if exchange_rate %}
+              <div style="font-size: 14px; color: #86868b; font-weight: 500; margin-top: 4px;">
+                ≈ ₦{{ total_ngn|floatformat:0 }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Remaining Balance</label>
+            <div class="view-field">
+              {% if registration.is_fully_paid %}
+                <span style="color: #34c759; font-weight: 600;">$0.00 - Fully Paid</span>
+              {% else %}
+                <span style="color: #ff6b35; font-weight: 700; font-size: 16px;">
+                  ${{ registration.get_remaining_balance|floatformat:2 }}
+                </span>
+                {% if exchange_rate %}
+                <div style="font-size: 12px; color: #86868b; margin-top: 4px;">
+                  ≈ ₦{{ remaining_ngn|floatformat:0 }}
+                </div>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Reference Number</label>
+            <div class="view-field" style="font-family: monospace; font-size: 13px;">
+              {{ registration.squad_reference|default:registration.paystack_reference|default:"-" }}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Currency</label>
+            <div class="view-field">
+              <span class="badge badge-info">{{ registration.currency|default:"USD" }}</span>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Additional Information -->
+      <fieldset class="form-fieldset">
+        <legend>
+          <iconify-icon icon="lucide:info" style="font-size: 18px;"></iconify-icon>
+          Additional Information
+        </legend>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Referral Source</label>
+            <div class="view-field">{{ registration.referral_source|default:"-" }}</div>
+          </div>
+          
+          <div class="form-group">
+            <label>Created At</label>
+            <div class="view-field">{{ registration.created_at|date:"F d, Y g:i A" }}</div>
+          </div>
+          
+          <div class="form-group">
+            <label>Last Updated</label>
+            <div class="view-field">{{ registration.updated_at|date:"F d, Y g:i A" }}</div>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Transactions -->
+      {% if transactions %}
+      <fieldset class="form-fieldset">
+        <legend>
+          <iconify-icon icon="lucide:receipt" style="font-size: 18px;"></iconify-icon>
+          Payment Transactions ({{ transactions.count }})
+        </legend>
+        <div class="data-table" style="margin-top: 20px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
+          <div class="table-content">
+            <table style="margin: 0;">
+              <thead>
+                <tr>
+                  <th style="background: #f8fafc; padding: 16px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Reference</th>
+                  <th style="background: #f8fafc; padding: 16px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Amount</th>
+                  <th style="background: #f8fafc; padding: 16px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Currency</th>
+                  <th style="background: #f8fafc; padding: 16px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Channel</th>
+                  <th style="background: #f8fafc; padding: 16px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for transaction in transactions %}
+                <tr style="border-bottom: 1px solid #f5f5f7;">
+                  <td style="padding: 16px; font-family: 'SF Mono', 'Monaco', 'Courier New', monospace; font-size: 12px; color: #1d1d1f;">{{ transaction.reference|truncatechars:30 }}</td>
+                  <td style="padding: 16px; font-weight: 600; color: #0071e3; font-size: 15px;">
+                    {% if transaction.currency == 'NGN' %}
+                      ₦{{ transaction.amount|floatformat:0 }}
+                    {% else %}
+                      ${{ transaction.amount|floatformat:2 }}
+                    {% endif %}
+                  </td>
+                  <td style="padding: 16px; color: #64748b; font-size: 14px;">{{ transaction.currency|default:"USD" }}</td>
+                  <td style="padding: 16px; color: #1d1d1f; font-size: 14px;">{{ transaction.channel|default:"-" }}</td>
+                  <td style="padding: 16px; color: #64748b; font-size: 14px;">{{ transaction.paid_at|date:"M d, Y g:i A"|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </fieldset>
+      {% endif %}
+
+      <!-- Action Buttons -->
+      <div class="form-actions" style="margin-top: 40px; padding-top: 32px; border-top: 2px solid #f5f5f7; display: flex; gap: 12px; flex-wrap: wrap;">
+        <a href="{% url 'edit_registration' registration.id %}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; font-weight: 600; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 113, 227, 0.2);">
+          <iconify-icon icon="lucide:edit" style="font-size: 18px;"></iconify-icon>
+          Edit Registration
+        </a>
+        <a href="{% url 'admin_registrations' %}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; font-weight: 600; border-radius: 12px;">
+          <iconify-icon icon="lucide:arrow-left" style="font-size: 18px;"></iconify-icon>
+          Back to List
+        </a>
+        <form method="post" action="{% url 'delete_registration' registration.id %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this registration? This action cannot be undone.');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; font-weight: 600; border-radius: 12px;">
+            <iconify-icon icon="lucide:trash-2" style="font-size: 18px;"></iconify-icon>
+            Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .view-details-container {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+  }
+  
+  .form-fieldset {
+    margin-bottom: 40px;
+    padding: 0;
+    border: none;
+  }
+  
+  .form-fieldset:not(:last-child) {
+    border-bottom: 2px solid #f5f5f7;
+    padding-bottom: 32px;
+  }
+  
+  .form-fieldset legend {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1d1d1f;
+    margin-bottom: 24px;
+    padding: 0 16px;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .form-fieldset legend iconify-icon {
+    color: #0071e3;
+  }
+  
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  
+  .view-field {
+    padding: 14px 18px;
+    background: linear-gradient(to bottom, #ffffff, #f8fafc);
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    color: #1d1d1f;
+    font-size: 15px;
+    font-weight: 500;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+    word-break: break-word;
+  }
+  
+  .view-field:hover {
+    border-color: #0071e3;
+    box-shadow: 0 2px 8px rgba(0, 113, 227, 0.1);
+  }
+  
+  .view-field a {
+    color: #0071e3;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+  
+  .view-field a:hover {
+    color: #0077ed;
+    text-decoration: underline;
+  }
+  
+  .view-field .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  
+  /* Payment status styling */
+  .view-field iconify-icon {
+    margin-right: 6px;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .view-details-container {
+      padding: 24px 16px;
+    }
+    
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    
+    .form-fieldset legend {
+      font-size: 18px;
+    }
+  }
+</style>
+{% endblock %}

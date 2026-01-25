@@ -1,0 +1,209 @@
+{% extends 'registrations/admin/base.html' %}
+{% load static %}
+
+{% block page_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<div class="fade-in-up dashboard-page">
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-card-title">Total Registrations</span>
+        <div class="stat-card-icon primary">
+          <iconify-icon icon="lucide:users"></iconify-icon>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ total_registrations }}</div>
+      <div class="stat-card-change">All time registrations</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-card-title">Paid</span>
+        <div class="stat-card-icon success">
+          <iconify-icon icon="lucide:check-circle"></iconify-icon>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ paid_registrations }}</div>
+      <div class="stat-card-change">
+        {% if total_registrations > 0 %}
+          {% widthratio paid_registrations total_registrations 100 %}% completion rate
+        {% else %}
+          No registrations yet
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-card-title">Pending</span>
+        <div class="stat-card-icon warning">
+          <iconify-icon icon="lucide:clock"></iconify-icon>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ pending_registrations }}</div>
+      <div class="stat-card-change">Awaiting payment</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-card-title">Total Revenue</span>
+        <div class="stat-card-icon success">
+          <iconify-icon icon="lucide:dollar-sign"></iconify-icon>
+        </div>
+      </div>
+      <div class="stat-card-value">${{ total_revenue|floatformat:0 }}</div>
+      <div class="stat-card-change">From successful payments</div>
+    </div>
+  </div>
+
+  <!-- Recent Registrations -->
+  <div class="data-table fade-in-up" style="animation-delay: 0.1s;">
+    <div class="table-header">
+      <h2 class="table-title">Recent Registrations</h2>
+      <a href="{% url 'admin_registrations' %}" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">
+        View All
+      </a>
+    </div>
+    <div class="table-content">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Cohort</th>
+            <th>Dimension</th>
+            <th>Status</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for registration in recent_registrations %}
+          <tr>
+            <td data-label="Name" style="font-weight: 600;">{{ registration.full_name }}</td>
+            <td data-label="Email">{{ registration.email }}</td>
+            <td data-label="Cohort">
+              {% if registration.cohort %}
+                <span class="badge badge-info">{{ registration.cohort.name }}</span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td data-label="Dimension">
+              {% if registration.dimension %}
+                <span class="badge badge-info">{{ registration.dimension.code }}</span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td data-label="Status">
+              {% if registration.status == 'PAID' %}
+                <span class="badge badge-success">Paid</span>
+              {% elif registration.status == 'PENDING' %}
+                <span class="badge badge-warning">Pending</span>
+              {% else %}
+                <span class="badge badge-danger">Failed</span>
+              {% endif %}
+            </td>
+            <td data-label="Amount" style="font-weight: 600; color: #0071e3;">
+              {% if registration.currency == 'NGN' %}
+                ₦{{ registration.amount|floatformat:0 }}
+              {% else %}
+                ${{ registration.amount|floatformat:0 }}
+              {% endif %}
+            </td>
+            <td data-label="Date">{{ registration.created_at|date:"M d, Y" }}</td>
+            <td>
+              <div class="action-buttons">
+                <a href="{% url 'edit_registration' registration.id %}" class="action-btn action-btn-edit" title="Edit">
+                  <iconify-icon icon="lucide:edit"></iconify-icon>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 40px; color: hsl(var(--admin-muted-foreground));">
+              No registrations yet
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent Transactions -->
+  <div class="data-table fade-in-up" style="animation-delay: 0.2s; margin-top: 24px;">
+    <div class="table-header">
+      <h2 class="table-title">Recent Transactions</h2>
+      <a href="{% url 'admin_transactions' %}" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">
+        View All
+      </a>
+    </div>
+    <div class="table-content">
+      <table>
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>Registration</th>
+            <th>Amount</th>
+            <th>Channel</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for transaction in recent_transactions %}
+          <tr>
+            <td style="font-family: monospace; font-size: 13px;">{{ transaction.reference }}</td>
+            <td>{{ transaction.registration.full_name }}</td>
+            <td style="font-weight: 600;">${{ transaction.amount|floatformat:2 }}</td>
+            <td>{{ transaction.channel|default:"-" }}</td>
+            <td>{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+            <td>
+              <div class="action-buttons">
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px; color: hsl(var(--admin-muted-foreground));">
+              No transactions yet
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="stats-grid" style="margin-top: 32px;">
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-card-title">Active Cohorts</span>
+        <div class="stat-card-icon info">
+          <iconify-icon icon="lucide:calendar"></iconify-icon>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ active_cohorts }}</div>
+      <div class="stat-card-change">Currently active</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-card-title">Active Dimensions</span>
+        <div class="stat-card-icon info">
+          <iconify-icon icon="lucide:layers"></iconify-icon>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ active_dimensions }}</div>
+      <div class="stat-card-change">Available for registration</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

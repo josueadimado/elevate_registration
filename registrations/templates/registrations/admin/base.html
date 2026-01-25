@@ -1,0 +1,553 @@
+{% if not user.is_authenticated or not user.is_staff %}
+  <script>window.location.href = "{% url 'admin_login' %}";</script>
+{% endif %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Admin Dashboard{% endblock %} - ASPIR</title>
+  <!-- Apple-inspired font stack -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v=13.0" />
+  <style>
+    /* Force remove yellow and ensure visibility - Comprehensive */
+    thead, thead th, thead tr, th {
+      background: #f5f5f7 !important;
+      color: #1d1d1f !important;
+    }
+    
+    /* Remove any yellow from ALL elements - Very aggressive */
+    *[style*="yellow"],
+    *[style*="Yellow"],
+    *[style*="YELLOW"],
+    *[style*="#ffd"],
+    *[style*="#ffc"],
+    *[style*="#ffb"],
+    *[style*="#ffa"],
+    *[style*="#ffff99"],
+    *[style*="#ffff00"],
+    *[style*="#ffeb3b"],
+    *[style*="#ffc107"],
+    *[style*="#ffd700"],
+    *[style*="#ffff"],
+    *[style*="rgb(255, 255, 0"],
+    *[style*="rgba(255, 255, 0"],
+    *[style*="rgb(255, 255, 153"],
+    *[style*="rgba(255, 255, 153"],
+    *[style*="rgb(255, 235, 59"],
+    *[style*="rgba(255, 235, 59"] {
+      background: #f5f5f7 !important;
+      color: #1d1d1f !important;
+    }
+    
+    /* Remove yellow from classes */
+    .yellow,
+    .bg-yellow,
+    .bg-warning-light,
+    .table-header-yellow,
+    .warning-light {
+      background: #f5f5f7 !important;
+      color: #1d1d1f !important;
+    }
+    
+    /* Settings page specific - remove yellow */
+    .settings-page,
+    .settings-page *,
+    .settings-page th,
+    .settings-page td,
+    .settings-page thead,
+    .settings-page thead th,
+    .settings-page thead tr,
+    .settings-page .data-table,
+    .settings-page .data-table thead,
+    .settings-page .data-table thead th,
+    .settings-page .data-table thead tr,
+    .settings-page .table-header,
+    .settings-page .table-title {
+      background: #f5f5f7 !important;
+      color: #1d1d1f !important;
+    }
+    
+    .settings-page th,
+    .settings-page td,
+    .settings-page .table-title,
+    .settings-page h2,
+    .settings-page h4,
+    .settings-page p {
+      color: #1d1d1f !important;
+    }
+    
+    /* Dashboard page specific - remove yellow */
+    .dashboard-page thead,
+    .dashboard-page thead th,
+    .dashboard-page thead tr,
+    .dashboard-page .table-header,
+    .dashboard-page .data-table thead,
+    .dashboard-page .data-table thead th,
+    .dashboard-page .data-table thead tr {
+      background: #f5f5f7 !important;
+      color: #1d1d1f !important;
+    }
+    
+    /* Remove yellow from stat card icons */
+    .dashboard-page .stat-card-icon,
+    .stat-card-icon {
+      background: #dbeafe !important;
+      color: #0071e3 !important;
+    }
+    
+    .dashboard-page .stat-card-icon.success,
+    .stat-card-icon.success {
+      background: #dcfce7 !important;
+      color: #34c759 !important;
+    }
+    
+    .dashboard-page .stat-card-icon.warning,
+    .stat-card-icon.warning {
+      background: #fff4f0 !important;
+      color: #ff6b35 !important;
+    }
+    
+    /* Ensure action buttons are visible */
+    .action-buttons, .action-btn {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    
+    /* Font consistency */
+    body, .admin-body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    }
+    
+    /* Sidebar positioning fix */
+    .admin-sidebar {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      z-index: 1000 !important;
+    }
+    
+    /* Sidebar toggle positioning */
+    .sidebar-toggle {
+      position: fixed !important;
+      z-index: 1002 !important;
+    }
+    
+    /* Currency badge styling */
+    .badge-info {
+      background: #dbeafe !important;
+      color: #0071e3 !important;
+      border: 1px solid rgba(0, 113, 227, 0.2) !important;
+    }
+    
+    /* Mobile sidebar overlay */
+    @media (max-width: 1024px) {
+      body.sidebar-open {
+        overflow: hidden;
+      }
+      
+      .admin-sidebar:not(.collapsed) + .admin-main::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        pointer-events: all;
+      }
+    }
+    
+    /* Comprehensive input borders - ensure ALL input types have visible borders */
+    .admin-edit-form input[type="text"],
+    .admin-edit-form input[type="email"],
+    .admin-edit-form input[type="number"],
+    .admin-edit-form input[type="tel"],
+    .admin-edit-form input[type="password"],
+    .admin-edit-form input[type="url"],
+    .admin-edit-form input[type="search"],
+    .admin-edit-form input[type="date"],
+    .admin-edit-form input[type="datetime-local"],
+    .admin-edit-form input[type="time"],
+    .admin-edit-form input[type="month"],
+    .admin-edit-form input[type="week"],
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="number"],
+    .form-group input[type="tel"],
+    .form-group input[type="password"],
+    .form-group input[type="url"],
+    .form-group input[type="search"],
+    .form-group input[type="date"],
+    .form-group input[type="datetime-local"],
+    .form-group input[type="time"],
+    .form-group input[type="month"],
+    .form-group input[type="week"],
+    .form-fieldset input[type="text"],
+    .form-fieldset input[type="email"],
+    .form-fieldset input[type="number"],
+    .form-fieldset input[type="tel"],
+    .form-fieldset input[type="password"],
+    .form-fieldset input[type="url"],
+    .form-fieldset input[type="search"],
+    .form-fieldset input[type="date"],
+    .form-fieldset input[type="datetime-local"],
+    .form-fieldset input[type="time"],
+    .form-fieldset input[type="month"],
+    .form-fieldset input[type="week"] {
+      border: 1px solid #d2d2d7 !important;
+      border-radius: 8px !important;
+      padding: 12px 16px !important;
+      background: #ffffff !important;
+      color: #1d1d1f !important;
+      min-height: 44px !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+    }
+    
+    .admin-edit-form input[type="text"]:focus,
+    .admin-edit-form input[type="email"]:focus,
+    .admin-edit-form input[type="number"]:focus,
+    .admin-edit-form input[type="tel"]:focus,
+    .admin-edit-form input[type="password"]:focus,
+    .admin-edit-form input[type="url"]:focus,
+    .admin-edit-form input[type="search"]:focus,
+    .admin-edit-form input[type="date"]:focus,
+    .admin-edit-form input[type="datetime-local"]:focus,
+    .admin-edit-form input[type="time"]:focus,
+    .admin-edit-form input[type="month"]:focus,
+    .admin-edit-form input[type="week"]:focus,
+    .form-group input[type="text"]:focus,
+    .form-group input[type="email"]:focus,
+    .form-group input[type="number"]:focus,
+    .form-group input[type="tel"]:focus,
+    .form-group input[type="password"]:focus,
+    .form-group input[type="url"]:focus,
+    .form-group input[type="search"]:focus,
+    .form-group input[type="date"]:focus,
+    .form-group input[type="datetime-local"]:focus,
+    .form-group input[type="time"]:focus,
+    .form-group input[type="month"]:focus,
+    .form-group input[type="week"]:focus,
+    .form-fieldset input[type="text"]:focus,
+    .form-fieldset input[type="email"]:focus,
+    .form-fieldset input[type="number"]:focus,
+    .form-fieldset input[type="tel"]:focus,
+    .form-fieldset input[type="password"]:focus,
+    .form-fieldset input[type="url"]:focus,
+    .form-fieldset input[type="search"]:focus,
+    .form-fieldset input[type="date"]:focus,
+    .form-fieldset input[type="datetime-local"]:focus,
+    .form-fieldset input[type="time"]:focus,
+    .form-fieldset input[type="month"]:focus,
+    .form-fieldset input[type="week"]:focus {
+      outline: none !important;
+      border-color: #0071e3 !important;
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1) !important;
+    }
+    
+    /* Textarea borders - ensure visible borders */
+    .admin-edit-form textarea,
+    .form-group textarea,
+    .form-fieldset textarea {
+      border: 1px solid #d2d2d7 !important;
+      border-radius: 8px !important;
+      padding: 12px 16px !important;
+      background: #ffffff !important;
+      color: #1d1d1f !important;
+      min-height: 120px !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+      resize: vertical !important;
+    }
+    
+    .admin-edit-form textarea:focus,
+    .form-group textarea:focus,
+    .form-fieldset textarea:focus {
+      outline: none !important;
+      border-color: #0071e3 !important;
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1) !important;
+    }
+    
+    /* Select dropdown borders - ensure visible borders */
+    .admin-edit-form select,
+    .form-group select,
+    .form-fieldset select {
+      border: 1px solid #d2d2d7 !important;
+      border-radius: 8px !important;
+      padding: 12px 16px !important;
+      padding-right: 40px !important;
+      background: #ffffff !important;
+      color: #1d1d1f !important;
+      min-height: 44px !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+    }
+    
+    .admin-edit-form select:focus,
+    .form-group select:focus,
+    .form-fieldset select:focus {
+      outline: none !important;
+      border-color: #0071e3 !important;
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1) !important;
+    }
+    
+    /* Ensure currency select field is visible */
+    select[id*="currency"],
+    .form-group select[id*="currency"],
+    .form-fieldset select[id*="currency"] {
+      border: 1px solid #d2d2d7 !important;
+      border-radius: 8px !important;
+      padding: 12px 16px !important;
+      padding-right: 40px !important;
+      background: #ffffff !important;
+      color: #1d1d1f !important;
+      min-height: 44px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      display: block !important;
+    }
+    
+    /* Ensure number inputs with currency symbols have proper styling */
+    .form-group div[style*="position: relative"] input[type="number"],
+    .form-group div[style*="position:relative"] input[type="number"] {
+      border: 1px solid #d2d2d7 !important;
+      border-radius: 8px !important;
+      padding: 12px 16px !important;
+      padding-left: 32px !important;
+      background: #ffffff !important;
+      color: #1d1d1f !important;
+      min-height: 44px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      font-size: 1rem !important;
+      line-height: 1.5 !important;
+      overflow: visible !important;
+      text-overflow: visible !important;
+      -webkit-appearance: textfield !important;
+      -moz-appearance: textfield !important;
+    }
+    
+    .form-group div[style*="position: relative"] input[type="number"]:focus,
+    .form-group div[style*="position:relative"] input[type="number"]:focus {
+      outline: none !important;
+      border-color: #0071e3 !important;
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1) !important;
+    }
+    
+    /* Ensure form help text is visible */
+    .form-help,
+    small.form-help {
+      font-size: 0.875rem !important;
+      color: #86868b !important;
+      margin-top: 8px !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      line-height: 1.5 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', sans-serif !important;
+    }
+  </style>
+  <link rel="stylesheet" href="{% static 'css/admin-forms.css' %}" />
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="admin-body">
+  <!-- Sidebar Toggle Button - Fixed Position (moved outside wrapper for better positioning) -->
+  <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+    <iconify-icon icon="lucide:panel-left-close" id="sidebarToggleIcon"></iconify-icon>
+  </button>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="sidebar-header">
+        <img src="{% static 'images/Elevate-Tribe-Bg-Remover.png' %}" alt="Logo" class="sidebar-logo" style="height: 50px; width: auto; filter: brightness(0) invert(1);">
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="{% url 'admin_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+          <iconify-icon icon="lucide:layout-dashboard"></iconify-icon>
+          <span>Dashboard</span>
+        </a>
+        <a href="{% url 'admin_registrations' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_registrations' %}active{% endif %}">
+          <iconify-icon icon="lucide:users"></iconify-icon>
+          <span>Registrations</span>
+        </a>
+        <a href="{% url 'admin_transactions' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_transactions' %}active{% endif %}">
+          <iconify-icon icon="lucide:credit-card"></iconify-icon>
+          <span>Transactions</span>
+        </a>
+        <a href="{% url 'admin_settings' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}">
+          <iconify-icon icon="lucide:settings"></iconify-icon>
+          <span>Settings</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <a href="/" class="nav-item" target="_blank">
+          <iconify-icon icon="lucide:external-link"></iconify-icon>
+          <span>View Site</span>
+        </a>
+        <a href="{% url 'admin_logout' %}" class="nav-item">
+          <iconify-icon icon="lucide:log-out"></iconify-icon>
+          <span>Logout</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main" id="adminMain">
+      <header class="admin-header">
+        <div class="header-content">
+          <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+          <div class="header-actions">
+            <div class="user-info">
+              <iconify-icon icon="lucide:user" style="font-size: 18px; margin-right: 8px;"></iconify-icon>
+              <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        {% if messages %}
+          <div class="messages-container">
+            {% for message in messages %}
+              <div class="message message-{{ message.tags }}">
+                <iconify-icon icon="lucide:{% if message.tags == 'error' %}alert-circle{% elif message.tags == 'success' %}check-circle{% else %}info{% endif %}"></iconify-icon>
+                <span>{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
+  <script>
+    // Sidebar toggle functionality
+    function toggleSidebar() {
+      const sidebar = document.getElementById('adminSidebar');
+      const main = document.getElementById('adminMain');
+      const toggleIcon = document.getElementById('sidebarToggleIcon');
+      const toggleButton = document.getElementById('sidebarToggle');
+      const body = document.body;
+      const isMobile = window.innerWidth <= 1024;
+      
+      const isCollapsing = !sidebar.classList.contains('collapsed');
+      
+      sidebar.classList.toggle('collapsed');
+      main.classList.toggle('sidebar-collapsed');
+      
+      // On mobile, prevent body scroll when sidebar is open
+      if (isMobile) {
+        if (isCollapsing) {
+          body.classList.add('sidebar-open');
+        } else {
+          body.classList.remove('sidebar-open');
+        }
+      }
+      
+      // Change icon and button position
+      if (isCollapsing) {
+        // Sidebar is being collapsed
+        toggleIcon.setAttribute('icon', 'lucide:menu');
+        if (!isMobile) {
+          toggleButton.style.left = '24px';
+        }
+      } else {
+        // Sidebar is being expanded
+        toggleIcon.setAttribute('icon', 'lucide:panel-left-close');
+        if (!isMobile) {
+          toggleButton.style.left = '304px';
+        }
+      }
+      
+      // Save state to localStorage
+      localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+    }
+    
+    // Close sidebar when clicking overlay on mobile
+    document.addEventListener('click', function(e) {
+      const sidebar = document.getElementById('adminSidebar');
+      const isMobile = window.innerWidth <= 1024;
+      
+      if (isMobile && !sidebar.classList.contains('collapsed')) {
+        // Check if click is outside sidebar
+        if (!sidebar.contains(e.target) && !e.target.closest('.sidebar-toggle')) {
+          toggleSidebar();
+        }
+      }
+    });
+    
+    // Restore sidebar state on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+      const sidebar = document.getElementById('adminSidebar');
+      const main = document.getElementById('adminMain');
+      const toggleIcon = document.getElementById('sidebarToggleIcon');
+      const toggleButton = document.getElementById('sidebarToggle');
+      const body = document.body;
+      const isMobile = window.innerWidth <= 1024;
+      
+      // On mobile, always start with sidebar collapsed
+      if (isMobile) {
+        sidebar.classList.add('collapsed');
+        main.classList.add('sidebar-collapsed');
+        toggleIcon.setAttribute('icon', 'lucide:menu');
+        toggleButton.style.left = '20px';
+        body.classList.remove('sidebar-open');
+      } else {
+        // Desktop: restore saved state
+        if (isCollapsed) {
+          sidebar.classList.add('collapsed');
+          main.classList.add('sidebar-collapsed');
+          toggleIcon.setAttribute('icon', 'lucide:menu');
+          toggleButton.style.left = '24px';
+        } else {
+          toggleIcon.setAttribute('icon', 'lucide:panel-left-close');
+          toggleButton.style.left = '304px';
+        }
+      }
+      
+      // Handle window resize
+      function handleResize() {
+        const isMobileNow = window.innerWidth <= 1024;
+        
+        if (isMobileNow) {
+          // Mobile: always collapse sidebar
+          sidebar.classList.add('collapsed');
+          main.classList.add('sidebar-collapsed');
+          toggleIcon.setAttribute('icon', 'lucide:menu');
+          toggleButton.style.left = '20px';
+          body.classList.remove('sidebar-open');
+        } else {
+          // Desktop: restore saved state
+          const wasCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+          if (wasCollapsed) {
+            toggleButton.style.left = '24px';
+          } else {
+            sidebar.classList.remove('collapsed');
+            main.classList.remove('sidebar-collapsed');
+            toggleIcon.setAttribute('icon', 'lucide:panel-left-close');
+            toggleButton.style.left = '304px';
+          }
+        }
+      }
+      
+      window.addEventListener('resize', handleResize);
+    });
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,419 @@
+{% extends 'registrations/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="export-wrapper">
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="{% url 'home' %}" class="logo">
+        <img src="{% static 'images/Elevate-Tribe-Bg-Remover.png' %}" alt="Elevate Tribe Logo" style="height: 60px; width: auto;">
+      </a>
+      <div class="nav-links">
+        <a href="{% url 'home' %}" class="nav-link">Home</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Success Section -->
+  <section class="section" style="padding-top: 100px; padding-bottom: 100px; min-height: 70vh; display: flex; align-items: center;">
+    <div class="container">
+      <div style="max-width: 600px; margin: 0 auto; text-align: center;">
+        {% if registration %}
+          {% if registration.is_fully_paid %}
+            <!-- Fully Paid -->
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #34c759, #30d158); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px auto; box-shadow: 0 8px 24px rgba(52, 199, 89, 0.3);">
+              <iconify-icon icon="lucide:check-circle" style="font-size: 48px; color: white;"></iconify-icon>
+            </div>
+            
+            <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 16px; color: hsl(var(--foreground));">
+              Payment Complete! 🎉
+            </h1>
+            
+            <p style="font-size: 18px; color: hsl(var(--muted-foreground)); margin-bottom: 48px;">
+              Welcome to ASPIR Mentorship Program. Your registration is fully paid and confirmed.
+            </p>
+          {% elif registration.registration_fee_paid %}
+            <!-- Registration Fee Paid Only -->
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ff6b35, #ff5722); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px auto; box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);">
+              <iconify-icon icon="lucide:alert-circle" style="font-size: 48px; color: white;"></iconify-icon>
+            </div>
+            
+            <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 16px; color: hsl(var(--foreground));">
+              Registration Fee Paid
+            </h1>
+            
+            <p style="font-size: 18px; color: hsl(var(--muted-foreground)); margin-bottom: 48px;">
+              Your registration fee has been received. Please complete your payment below to finalize your enrollment.
+            </p>
+          {% else %}
+            <!-- No Payment Made -->
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #86868b, #64748b); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px auto; box-shadow: 0 8px 24px rgba(134, 134, 139, 0.3);">
+              <iconify-icon icon="lucide:clock" style="font-size: 48px; color: white;"></iconify-icon>
+            </div>
+            
+            <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 16px; color: hsl(var(--foreground));">
+              Registration Received
+            </h1>
+            
+            <p style="font-size: 18px; color: hsl(var(--muted-foreground)); margin-bottom: 48px;">
+              Your registration has been recorded. Please complete your payment below to confirm your enrollment.
+            </p>
+          {% endif %}
+        {% else %}
+          <!-- Fallback if no registration -->
+          <div style="width: 80px; height: 80px; background: hsl(var(--secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px auto;">
+            <iconify-icon icon="lucide:check-circle" style="font-size: 48px; color: hsl(var(--primary))"></iconify-icon>
+          </div>
+          
+          <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 16px; color: hsl(var(--foreground));">
+            Registration Status
+          </h1>
+          
+          <p style="font-size: 18px; color: hsl(var(--muted-foreground)); margin-bottom: 48px;">
+            View your registration details below.
+          </p>
+        {% endif %}
+
+        {% if registration %}
+        <div class="card" style="text-align: left; margin-bottom: 32px;">
+          <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid hsl(var(--border));">
+            Registration Summary
+          </h3>
+          
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: hsl(var(--muted-foreground));">Name:</span>
+              <span style="font-weight: 600;">{{ registration.full_name }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: hsl(var(--muted-foreground));">Email:</span>
+              <span style="font-weight: 600;">{{ registration.email }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: hsl(var(--muted-foreground));">Cohort:</span>
+              <span style="font-weight: 600;">{% if registration.cohort %}{{ registration.cohort.name }}{% else %}{{ registration.get_cohort_display }}{% endif %}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: hsl(var(--muted-foreground));">Group:</span>
+              <span style="font-weight: 600;">{{ registration.get_group_display }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: hsl(var(--muted-foreground));">Dimension:</span>
+              <span style="font-weight: 600;">{% if registration.dimension %}{{ registration.dimension.name }}{% else %}{{ registration.get_dimension_display }}{% endif %}</span>
+            </div>
+            
+            <!-- Payment Breakdown -->
+            <div style="margin-top: 8px; padding-top: 16px; border-top: 1px solid hsl(var(--border));">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: hsl(var(--muted-foreground));">Registration Fee:</span>
+                <div style="text-align: right;">
+                  {% if registration.registration_fee_paid %}
+                    <span style="color: #34c759; font-weight: 600;">✓ Paid: ${{ registration.registration_fee_amount|default:registration.get_registration_fee|floatformat:2 }}</span>
+                  {% else %}
+                    <span style="color: #ff6b35; font-weight: 600;">Pending: ${{ registration.registration_fee_amount|default:registration.get_registration_fee|floatformat:2 }}</span>
+                  {% endif %}
+                  {% if exchange_rate %}
+                  <div style="font-size: 12px; color: #86868b; margin-top: 2px;">
+                    ≈ ₦{{ reg_fee_ngn|floatformat:0 }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: hsl(var(--muted-foreground));">Course Fee:</span>
+                <div style="text-align: right;">
+                  {% if registration.course_fee_paid %}
+                    <span style="color: #34c759; font-weight: 600;">✓ Paid: ${{ registration.course_fee_amount|default:registration.get_course_fee|floatformat:2 }}</span>
+                  {% else %}
+                    <span style="color: #ff6b35; font-weight: 600;">Pending: ${{ registration.course_fee_amount|default:registration.get_course_fee|floatformat:2 }}</span>
+                  {% endif %}
+                  {% if exchange_rate %}
+                  <div style="font-size: 12px; color: #86868b; margin-top: 2px;">
+                    ≈ ₦{{ course_fee_ngn|floatformat:0 }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid hsl(var(--border)); margin-top: 8px;">
+                <span style="color: hsl(var(--muted-foreground)); font-weight: 600;">Total Amount:</span>
+                <div style="text-align: right;">
+                  <span style="font-weight: 700; font-size: 18px;">${{ registration.amount|floatformat:2 }}</span>
+                  {% if exchange_rate %}
+                  <div style="font-size: 14px; color: #86868b; font-weight: 500; margin-top: 2px;">
+                    ≈ ₦{{ total_amount_ngn|floatformat:0 }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              {% if exchange_rate %}
+              <div style="background: rgba(0, 113, 227, 0.08); border: 1px solid rgba(0, 113, 227, 0.15); border-radius: 8px; padding: 12px; margin-top: 12px;">
+                <p style="font-size: 12px; color: #64748b; margin: 0; line-height: 1.5;">
+                  <iconify-icon icon="lucide:info" style="font-size: 14px; vertical-align: middle; color: #0071e3;"></iconify-icon>
+                  <strong style="color: #1d1d1f;">Payment Currency:</strong> Your payment was processed in <strong style="color: #0071e3;">Nigerian Naira (₦)</strong>. The USD amounts shown are for reference. Exchange rate: 1 USD = ₦{{ exchange_rate|floatformat:2 }}.
+                </p>
+              </div>
+              {% endif %}
+              {% if not registration.is_fully_paid %}
+              <div style="display: flex; justify-content: space-between; padding-top: 8px; margin-top: 8px; background: rgba(255, 107, 53, 0.1); padding: 12px; border-radius: 8px;">
+                <span style="color: #ff6b35; font-weight: 600;">Remaining Balance:</span>
+                <span style="color: #ff6b35; font-weight: 700; font-size: 18px;">${{ registration.get_remaining_balance|floatformat:2 }}</span>
+              </div>
+              {% endif %}
+            </div>
+            
+            {% if registration.squad_reference or registration.paystack_reference %}
+            <div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 16px; border-top: 1px solid hsl(var(--border));">
+              <span style="color: hsl(var(--muted-foreground));">Reference:</span>
+              <span style="font-weight: 600; font-family: monospace; font-size: 12px;">{{ registration.squad_reference|default:registration.paystack_reference }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if registration and not registration.is_fully_paid %}
+        <!-- Payment Action Section -->
+        <div style="background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(0, 113, 227, 0.1)); border: 2px solid rgba(255, 107, 53, 0.2); border-radius: 20px; padding: 32px; margin-bottom: 32px; text-align: center;">
+          <div style="width: 64px; height: 64px; background: #ff6b35; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+            <iconify-icon icon="lucide:credit-card" style="font-size: 32px; color: white;"></iconify-icon>
+          </div>
+          <h3 style="font-size: 22px; font-weight: 700; margin-bottom: 12px; color: #1d1d1f;">
+            {% if registration.registration_fee_paid %}
+              Complete Your Payment
+            {% else %}
+              Make Your Payment
+            {% endif %}
+          </h3>
+          <p style="font-size: 16px; color: #64748b; margin-bottom: 24px; line-height: 1.6;">
+            {% if registration.registration_fee_paid %}
+              You've successfully paid your registration fee. To complete your enrollment, please pay the remaining course fee of <strong style="color: #ff6b35;">${{ registration.get_remaining_balance|floatformat:2 }}</strong>.
+            {% else %}
+              To confirm your enrollment, please pay your registration fee of <strong style="color: #ff6b35;">${{ registration.registration_fee_amount|default:registration.get_registration_fee|floatformat:2 }}</strong>.
+              {% if not registration.course_fee_paid %}
+                The remaining course fee of <strong style="color: #ff6b35;">${{ registration.course_fee_amount|default:registration.get_course_fee|floatformat:2 }}</strong> can be paid later.
+              {% endif %}
+            {% endif %}
+          </p>
+          {% if registration.registration_fee_paid %}
+            <!-- Pay Course Fee Button -->
+            <button id="pay-course-fee-btn" onclick="payCourseFee()" style="background: linear-gradient(135deg, #ff6b35, #0071e3); color: white; border: none; border-radius: 12px; padding: 16px 32px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);">
+              <iconify-icon icon="lucide:arrow-right" style="font-size: 18px; vertical-align: middle; margin-right: 8px;"></iconify-icon>
+              Pay Remaining Balance (${{ registration.get_remaining_balance|floatformat:2 }})
+            </button>
+          {% else %}
+            <!-- Pay Registration Fee Button -->
+            <button id="pay-registration-fee-btn" onclick="payRegistrationFee()" style="background: linear-gradient(135deg, #ff6b35, #0071e3); color: white; border: none; border-radius: 12px; padding: 16px 32px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);">
+              <iconify-icon icon="lucide:credit-card" style="font-size: 18px; vertical-align: middle; margin-right: 8px;"></iconify-icon>
+              Pay Registration Fee (${{ registration.registration_fee_amount|default:registration.get_registration_fee|floatformat:2 }})
+            </button>
+            <p style="font-size: 13px; color: #86868b; margin-top: 16px;">
+              Or <a href="{% url 'register' %}" style="color: #0071e3; text-decoration: none;">register again</a> to start a new payment process.
+            </p>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Next Steps Section -->
+        <div style="background: linear-gradient(135deg, rgba(0, 113, 227, 0.08), rgba(139, 92, 246, 0.06)); border: 2px solid rgba(0, 113, 227, 0.15); border-radius: 20px; padding: 32px; margin-bottom: 32px; text-align: left;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+            <div style="width: 40px; height: 40px; background: #0071e3; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <iconify-icon icon="lucide:info" style="font-size: 20px; color: white;"></iconify-icon>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 700; margin: 0; color: #1d1d1f;">What Happens Next?</h3>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            {% if registration.is_fully_paid %}
+            <div style="display: flex; gap: 12px;">
+              <iconify-icon icon="lucide:check-circle-2" style="font-size: 20px; color: #34c759; flex-shrink: 0; margin-top: 2px;"></iconify-icon>
+              <div>
+                <strong style="color: #1d1d1f; display: block; margin-bottom: 4px;">Payment Complete</strong>
+                <span style="color: #64748b; font-size: 14px;">Your registration is fully paid and confirmed. You're all set!</span>
+              </div>
+            </div>
+            {% else %}
+            <div style="display: flex; gap: 12px;">
+              <iconify-icon icon="lucide:credit-card" style="font-size: 20px; color: #ff6b35; flex-shrink: 0; margin-top: 2px;"></iconify-icon>
+              <div>
+                <strong style="color: #1d1d1f; display: block; margin-bottom: 4px;">
+                  {% if registration.registration_fee_paid %}
+                    Complete Your Payment
+                  {% else %}
+                    Make Your Payment
+                  {% endif %}
+                </strong>
+                <span style="color: #64748b; font-size: 14px;">
+                  {% if registration.registration_fee_paid %}
+                    Pay the remaining course fee to complete your enrollment. You can do this now or later from your email confirmation.
+                  {% else %}
+                    Complete your registration by paying the registration fee. The course fee can be paid later to finalize your enrollment.
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+            {% endif %}
+            
+            <div style="display: flex; gap: 12px;">
+              <iconify-icon icon="lucide:mail" style="font-size: 20px; color: #0071e3; flex-shrink: 0; margin-top: 2px;"></iconify-icon>
+              <div>
+                <strong style="color: #1d1d1f; display: block; margin-bottom: 4px;">Confirmation Email</strong>
+                <span style="color: #64748b; font-size: 14px;">You'll receive a confirmation email with your registration details and payment receipt within the next few minutes.</span>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+              <iconify-icon icon="lucide:calendar" style="font-size: 20px; color: #8b5cf6; flex-shrink: 0; margin-top: 2px;"></iconify-icon>
+              <div>
+                <strong style="color: #1d1d1f; display: block; margin-bottom: 4px;">Program Start Date</strong>
+                <span style="color: #64748b; font-size: 14px;">You'll receive program start date and schedule information via email once your cohort is finalized.</span>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+              <iconify-icon icon="lucide:users" style="font-size: 20px; color: #34c759; flex-shrink: 0; margin-top: 2px;"></iconify-icon>
+              <div>
+                <strong style="color: #1d1d1f; display: block; margin-bottom: 4px;">Join Your Cohort</strong>
+                <span style="color: #64748b; font-size: 14px;">You'll be added to your cohort's communication channel and receive access to learning materials before the program begins.</span>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+              <iconify-icon icon="lucide:help-circle" style="font-size: 20px; color: #ff6b35; flex-shrink: 0; margin-top: 2px;"></iconify-icon>
+              <div>
+                <strong style="color: #1d1d1f; display: block; margin-bottom: 4px;">Need Help?</strong>
+                <span style="color: #64748b; font-size: 14px;">If you have any questions, contact our support team at <a href="mailto:info@elevatetribeanalytics.com" style="color: #0071e3; text-decoration: none;">info@elevatetribeanalytics.com</a> or call (+233) 20 956 9399.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 16px; justify-content: center;">
+          <a href="{% url 'home' %}" class="btn btn-primary">Back to Home</a>
+        </div>
+
+        <p style="margin-top: 32px; font-size: 14px; color: hsl(var(--muted-foreground));">
+          A confirmation email has been sent to your email address. If you have any questions, please contact our support team.
+        </p>
+        
+        {% if registration and not registration.is_fully_paid %}
+        <script>
+          // Get CSRF token from cookies
+          function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+              const cookies = document.cookie.split(';');
+              for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                  cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                  break;
+                }
+              }
+            }
+            return cookieValue;
+          }
+          
+          {% if not registration.registration_fee_paid %}
+          async function payRegistrationFee() {
+            const btn = document.getElementById('pay-registration-fee-btn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<iconify-icon icon="lucide:loader-2" style="animation: spin 1s linear infinite; font-size: 18px;"></iconify-icon> Processing...';
+            
+            try {
+              const response = await fetch('{% url "pay_registration_fee" registration.id %}', {
+                method: 'POST',
+                headers: {
+                  'X-CSRFToken': getCookie('csrftoken'),
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              const data = await response.json();
+              
+              if (data.status === 'success' && data.authorization_url) {
+                window.location.href = data.authorization_url;
+              } else {
+                alert(data.message || data.error || 'Failed to initialize payment. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+              }
+            } catch (error) {
+              console.error('Error:', error);
+              alert('An error occurred. Please try again.');
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+            }
+          }
+          {% endif %}
+          
+          {% if registration.registration_fee_paid %}
+          async function payCourseFee() {
+            const btn = document.getElementById('pay-course-fee-btn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<iconify-icon icon="lucide:loader-2" style="animation: spin 1s linear infinite; font-size: 18px;"></iconify-icon> Processing...';
+            
+            try {
+              const response = await fetch('{% url "pay_course_fee" registration.id %}', {
+                method: 'POST',
+                headers: {
+                  'X-CSRFToken': getCookie('csrftoken'),
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              const data = await response.json();
+              
+              if (data.status === 'success' && data.authorization_url) {
+                window.location.href = data.authorization_url;
+              } else {
+                alert(data.message || data.error || 'Failed to initialize payment. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+              }
+            } catch (error) {
+              console.error('Error:', error);
+              alert('An error occurred. Please try again.');
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+            }
+          }
+          {% endif %}
+          
+          // Add spin animation
+          const style = document.createElement('style');
+          style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+          document.head.appendChild(style);
+        </script>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="background: hsl(var(--foreground)); color: white; padding: 64px 0;">
+    <div class="container">
+      <div class="grid-2">
+        <div>
+          <div class="logo" style="color: white; margin-bottom: 16px; display: flex; align-items: center;">
+            <img src="{% static 'images/Elevate-Tribe-Bg-Remover.png' %}" alt="Elevate Tribe Logo" style="height: 60px; width: auto; filter: brightness(0) invert(1);">
+          </div>
+          <p style="color: hsla(0, 0%, 100%, 0.7); max-width: 300px; font-size: 14px;">
+            Empowering the next generation of leaders through purposeful mentorship and guided growth.
+          </p>
+        </div>
+        <div style="text-align: right">
+          <a href="#" style="color: white; font-size: 14px; margin-left: 24px">Contact Support</a>
+          <a href="#" style="color: white; font-size: 14px; margin-left: 24px">Privacy Policy</a>
+          <a href="#" style="color: white; font-size: 14px; margin-left: 24px">Terms of Service</a>
+        </div>
+      </div>
+      <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid hsla(0, 0%, 100%, 0.1); text-align: center; font-size: 13px; color: hsla(0, 0%, 100%, 0.5);">
+        © 2024 Elevate Tribe Analytics. All rights reserved.
+      </div>
+    </div>
+  </footer>
+</div>
+{% endblock %}

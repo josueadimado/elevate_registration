@@ -1,0 +1,71 @@
+{% extends 'registrations/admin/base.html' %}
+{% load static %}
+
+{% block page_title %}Transactions{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+  <!-- Filters -->
+  <form method="get" class="filter-bar">
+    <input 
+      type="text" 
+      class="filter-input" 
+      placeholder="Search by reference, name, email..."
+      value="{{ search_query }}"
+      name="search"
+    >
+    <button type="submit" class="btn btn-primary">Search</button>
+    <a href="{% url 'admin_transactions' %}" class="btn btn-secondary">Clear</a>
+  </form>
+
+  <!-- Transactions Table -->
+  <div class="data-table">
+    <div class="table-header">
+      <h2 class="table-title">All Transactions ({{ transactions.count }})</h2>
+    </div>
+    <div class="table-content">
+      <table>
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>Registration</th>
+            <th>Email</th>
+            <th>Amount</th>
+            <th>Currency</th>
+            <th>Channel</th>
+            <th>Paid At</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for transaction in transactions %}
+          <tr>
+            <td data-label="Reference" style="font-family: 'SF Mono', Monaco, monospace; font-size: 13px;">{{ transaction.reference }}</td>
+            <td data-label="Registration" style="font-weight: 600;">{{ transaction.registration.full_name }}</td>
+            <td data-label="Email">{{ transaction.registration.email }}</td>
+            <td data-label="Amount" style="font-weight: 700; color: #0071e3;">${{ transaction.amount|floatformat:2 }}</td>
+            <td data-label="Currency">{{ transaction.currency }}</td>
+            <td data-label="Channel">{{ transaction.channel|default:"-" }}</td>
+            <td data-label="Paid At">{% if transaction.paid_at %}{{ transaction.paid_at|date:"M d, Y H:i" }}{% else %}-{% endif %}</td>
+            <td data-label="Created">{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+            <td>
+              <div class="action-buttons">
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" style="text-align: center; padding: 60px; color: hsl(var(--admin-muted-foreground));">
+              <iconify-icon icon="lucide:credit-card" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px;"></iconify-icon>
+              <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No transactions found</div>
+              <div>Try adjusting your search</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

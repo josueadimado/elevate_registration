@@ -1,0 +1,699 @@
+"""
+Custom admin dashboard views for managing registrations and program settings.
+"""
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages, auth
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Sum, Q
+from django.utils import timezone
+from django.http import JsonResponse
+from datetime import timedelta
+from .models import (
+    Registration, Transaction, Cohort, Dimension, 
+    PricingConfig, ProgramSettings
+)
+from .admin_forms import (
+    AdminEditRegistrationForm, AdminEditCohortForm,
+    AdminEditDimensionForm, AdminEditPricingForm,
+    AdminEditProgramSettingsForm
+)
+
+
+def admin_login(request):
+    """
+    Custom admin login page.
+    """
+    if request.user.is_authenticated and request.user.is_staff:
+        return redirect('admin_dashboard')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        user = auth.authenticate(request, username=username, password=password)
+        if user is not None and user.is_staff:
+            auth.login(request, user)
+            next_url = request.GET.get('next', '/admin-panel/dashboard/')
+            # Handle both URL names and paths
+            if next_url.startswith('/'):
+                return redirect(next_url)
+            else:
+                return redirect(next_url)
+        else:
+            messages.error(request, 'Invalid credentials or you do not have admin access.')
+    
+    return render(request, 'registrations/admin/login.html')
+
+
+@login_required
+def admin_logout(request):
+    """
+    Custom admin logout.
+    """
+    auth.logout(request)
+    messages.success(request, 'You have been logged out successfully.')
+    return redirect('admin_login')
+
+
+@login_required
+def admin_dashboard(request):
+    """
+    Custom admin dashboard with overview statistics and management tools.
+    """
+    # Calculate statistics
+    total_registrations = Registration.objects.count()
+    paid_registrations = Registration.objects.filter(status='PAID').count()
+    pending_registrations = Registration.objects.filter(status='PENDING').count()
+    failed_registrations = Registration.objects.filter(status='FAILED').count()
+    
+    # Revenue statistics
+    total_revenue = Transaction.objects.aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+    
+    # Recent registrations (last 7 days)
+    seven_days_ago = timezone.now() - timedelta(days=7)
+    recent_registrations = Registration.objects.filter(
+        created_at__gte=seven_days_ago
+    ).order_by('-created_at')[:10]
+    
+    # Registrations by status
+    registrations_by_status = Registration.objects.values('status').annotate(
+        count=Count('id')
+    )
+    
+    # Registrations by cohort
+    registrations_by_cohort = Registration.objects.values(
+        'cohort__name'
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Registrations by dimension
+    registrations_by_dimension = Registration.objects.values(
+        'dimension__name'
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Recent transactions
+    recent_transactions = Transaction.objects.select_related(
+        'registration'
+    ).order_by('-created_at')[:10]
+    
+    # Active cohorts and dimensions
+    active_cohorts = Cohort.objects.filter(is_active=True).count()
+    active_dimensions = Dimension.objects.filter(is_active=True).count()
+    
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    context = {
+        'total_registrations': total_registrations,
+        'paid_registrations': paid_registrations,
+        'pending_registrations': pending_registrations,
+        'failed_registrations': failed_registrations,
+        'total_revenue': total_revenue,
+        'recent_registrations': recent_registrations,
+        'registrations_by_status': registrations_by_status,
+        'registrations_by_cohort': registrations_by_cohort,
+        'registrations_by_dimension': registrations_by_dimension,
+        'recent_transactions': recent_transactions,
+        'active_cohorts': active_cohorts,
+        'active_dimensions': active_dimensions,
+    }
+    
+    return render(request, 'registrations/admin/dashboard.html', context)
+
+
+@login_required
+def admin_registrations(request):
+    """
+    View all registrations with filtering and search.
+    """
+    registrations = Registration.objects.select_related(
+        'cohort', 'dimension'
+    ).order_by('-created_at')
+    
+    # Filtering
+    status_filter = request.GET.get('status', '')
+    cohort_filter = request.GET.get('cohort', '')
+    dimension_filter = request.GET.get('dimension', '')
+    search_query = request.GET.get('search', '')
+    
+    if status_filter:
+        registrations = registrations.filter(status=status_filter)
+    
+    if cohort_filter:
+        registrations = registrations.filter(cohort_id=cohort_filter)
+    
+    if dimension_filter:
+        registrations = registrations.filter(dimension_id=dimension_filter)
+    
+    if search_query:
+        registrations = registrations.filter(
+            Q(full_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(phone__icontains=search_query) |
+            Q(squad_reference__icontains=search_query) |
+            Q(paystack_reference__icontains=search_query)  # Legacy support
+        )
+    
+    # Get filter options
+    cohorts = Cohort.objects.filter(is_active=True)
+    dimensions = Dimension.objects.filter(is_active=True)
+    
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    context = {
+        'registrations': registrations,
+        'cohorts': cohorts,
+        'dimensions': dimensions,
+        'status_filter': status_filter,
+        'cohort_filter': cohort_filter,
+        'dimension_filter': dimension_filter,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'registrations/admin/registrations.html', context)
+
+
+@login_required
+def admin_transactions(request):
+    """
+    View all transactions.
+    """
+    transactions = Transaction.objects.select_related(
+        'registration'
+    ).order_by('-created_at')
+    
+    # Filtering
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        transactions = transactions.filter(
+            Q(reference__icontains=search_query) |
+            Q(registration__full_name__icontains=search_query) |
+            Q(registration__email__icontains=search_query)
+        )
+    
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    context = {
+        'transactions': transactions,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'registrations/admin/transactions.html', context)
+
+
+@login_required
+def admin_settings(request):
+    """
+    Custom settings page for managing cohorts, dimensions, and pricing.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    cohorts = Cohort.objects.all().order_by('-created_at')
+    dimensions = Dimension.objects.all().order_by('display_order')
+    pricing_configs = PricingConfig.objects.all()
+    settings = ProgramSettings.load()
+    
+    context = {
+        'cohorts': cohorts,
+        'dimensions': dimensions,
+        'pricing_configs': pricing_configs,
+        'settings': settings,
+    }
+    
+    return render(request, 'registrations/admin/settings.html', context)
+
+
+@login_required
+def view_registration(request, registration_id):
+    """
+    View registration details in read-only mode.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    registration = get_object_or_404(
+        Registration.objects.select_related('cohort', 'dimension'),
+        id=registration_id
+    )
+    
+    # Get related transactions
+    from .models import Transaction
+    transactions = Transaction.objects.filter(registration=registration).order_by('-paid_at')
+    
+    # Get exchange rate for display
+    from .utils import get_usd_to_ngn_rate
+    exchange_rate = get_usd_to_ngn_rate()
+    
+    # Calculate NGN amounts for display
+    reg_fee_ngn = round(float(registration.registration_fee_amount or registration.get_registration_fee()) * exchange_rate, 0)
+    course_fee_ngn = round(float(registration.course_fee_amount or registration.get_course_fee()) * exchange_rate, 0)
+    total_ngn = round(float(registration.amount) * exchange_rate, 0)
+    remaining_ngn = round(float(registration.get_remaining_balance()) * exchange_rate, 0)
+    
+    context = {
+        'registration': registration,
+        'transactions': transactions,
+        'exchange_rate': exchange_rate,
+        'reg_fee_ngn': reg_fee_ngn,
+        'course_fee_ngn': course_fee_ngn,
+        'total_ngn': total_ngn,
+        'remaining_ngn': remaining_ngn,
+        'page_title': 'View Registration',
+    }
+    
+    return render(request, 'registrations/admin/view_registration.html', context)
+
+
+@login_required
+def edit_registration(request, registration_id):
+    """
+    Edit a registration using custom form.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    registration = get_object_or_404(Registration, id=registration_id)
+    
+    if request.method == 'POST':
+        form = AdminEditRegistrationForm(request.POST, instance=registration)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Registration for {registration.full_name} has been updated successfully.')
+            return redirect('admin_registrations')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditRegistrationForm(instance=registration)
+    
+    context = {
+        'form': form,
+        'registration': registration,
+        'page_title': 'Edit Registration',
+    }
+    
+    return render(request, 'registrations/admin/edit_registration.html', context)
+
+
+@login_required
+def delete_registration(request, registration_id):
+    """
+    Delete a registration.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    if request.method == 'POST':
+        try:
+            registration = Registration.objects.get(id=registration_id)
+            registration.delete()
+            messages.success(request, f'Registration for {registration.full_name} has been deleted successfully.')
+        except Registration.DoesNotExist:
+            messages.error(request, 'Registration not found.')
+        except Exception as e:
+            messages.error(request, f'Error deleting registration: {str(e)}')
+    
+    return redirect('admin_registrations')
+
+
+@login_required
+def toggle_cohort(request, cohort_id):
+    """
+    Toggle cohort active status.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    try:
+        cohort = Cohort.objects.get(id=cohort_id)
+        cohort.is_active = not cohort.is_active
+        cohort.save()
+        status = 'activated' if cohort.is_active else 'deactivated'
+        messages.success(request, f'Cohort "{cohort.name}" has been {status}.')
+    except Cohort.DoesNotExist:
+        messages.error(request, 'Cohort not found.')
+    
+    return redirect('admin_settings')
+
+
+@login_required
+def toggle_dimension(request, dimension_id):
+    """
+    Toggle dimension active status.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    try:
+        dimension = Dimension.objects.get(id=dimension_id)
+        dimension.is_active = not dimension.is_active
+        dimension.save()
+        status = 'activated' if dimension.is_active else 'deactivated'
+        messages.success(request, f'Dimension "{dimension.name}" has been {status}.')
+    except Dimension.DoesNotExist:
+        messages.error(request, 'Dimension not found.')
+    
+    return redirect('admin_settings')
+
+
+@login_required
+def toggle_pricing(request, pricing_id):
+    """
+    Toggle pricing config active status.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    try:
+        pricing = PricingConfig.objects.get(id=pricing_id)
+        pricing.is_active = not pricing.is_active
+        pricing.save()
+        status = 'activated' if pricing.is_active else 'deactivated'
+        messages.success(request, f'Pricing for {pricing.get_enrollment_type_display()} has been {status}.')
+    except PricingConfig.DoesNotExist:
+        messages.error(request, 'Pricing configuration not found.')
+    
+    return redirect('admin_settings')
+
+
+@login_required
+def add_registration(request):
+    """
+    Add a new registration.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    if request.method == 'POST':
+        form = AdminEditRegistrationForm(request.POST)
+        if form.is_valid():
+            registration = form.save()
+            messages.success(request, f'Registration for {registration.full_name} has been created successfully.')
+            return redirect('admin_registrations')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditRegistrationForm()
+    
+    context = {
+        'form': form,
+        'page_title': 'Add New Registration',
+    }
+    
+    return render(request, 'registrations/admin/edit_registration.html', context)
+
+
+@login_required
+def add_cohort(request):
+    """
+    Add a new cohort.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    if request.method == 'POST':
+        form = AdminEditCohortForm(request.POST)
+        if form.is_valid():
+            cohort = form.save()
+            messages.success(request, f'Cohort "{cohort.name}" has been created successfully.')
+            return redirect('admin_settings')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditCohortForm()
+    
+    context = {
+        'form': form,
+        'page_title': 'Add New Cohort',
+    }
+    
+    return render(request, 'registrations/admin/edit_cohort.html', context)
+
+
+@login_required
+def edit_cohort(request, cohort_id):
+    """
+    Edit a cohort.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    cohort = get_object_or_404(Cohort, id=cohort_id)
+    
+    if request.method == 'POST':
+        form = AdminEditCohortForm(request.POST, instance=cohort)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Cohort "{cohort.name}" has been updated successfully.')
+            return redirect('admin_settings')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditCohortForm(instance=cohort)
+    
+    context = {
+        'form': form,
+        'cohort': cohort,
+        'page_title': 'Edit Cohort',
+    }
+    
+    return render(request, 'registrations/admin/edit_cohort.html', context)
+
+
+@login_required
+def delete_cohort(request, cohort_id):
+    """
+    Delete a cohort.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    if request.method == 'POST':
+        try:
+            cohort = Cohort.objects.get(id=cohort_id)
+            cohort_name = cohort.name
+            cohort.delete()
+            messages.success(request, f'Cohort "{cohort_name}" has been deleted successfully.')
+        except Cohort.DoesNotExist:
+            messages.error(request, 'Cohort not found.')
+        except Exception as e:
+            messages.error(request, f'Error deleting cohort: {str(e)}')
+    
+    return redirect('admin_settings')
+
+
+@login_required
+def add_dimension(request):
+    """
+    Add a new dimension.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    if request.method == 'POST':
+        form = AdminEditDimensionForm(request.POST)
+        if form.is_valid():
+            dimension = form.save()
+            messages.success(request, f'Dimension "{dimension.name}" has been created successfully.')
+            return redirect('admin_settings')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditDimensionForm()
+    
+    context = {
+        'form': form,
+        'page_title': 'Add New Dimension',
+    }
+    
+    return render(request, 'registrations/admin/edit_dimension.html', context)
+
+
+@login_required
+def edit_dimension(request, dimension_id):
+    """
+    Edit a dimension.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    dimension = get_object_or_404(Dimension, id=dimension_id)
+    
+    if request.method == 'POST':
+        form = AdminEditDimensionForm(request.POST, instance=dimension)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Dimension "{dimension.name}" has been updated successfully.')
+            return redirect('admin_settings')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditDimensionForm(instance=dimension)
+    
+    context = {
+        'form': form,
+        'dimension': dimension,
+        'page_title': 'Edit Dimension',
+    }
+    
+    return render(request, 'registrations/admin/edit_dimension.html', context)
+
+
+@login_required
+def delete_dimension(request, dimension_id):
+    """
+    Delete a dimension.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    if request.method == 'POST':
+        try:
+            dimension = Dimension.objects.get(id=dimension_id)
+            dimension_name = dimension.name
+            dimension.delete()
+            messages.success(request, f'Dimension "{dimension_name}" has been deleted successfully.')
+        except Dimension.DoesNotExist:
+            messages.error(request, 'Dimension not found.')
+        except Exception as e:
+            messages.error(request, f'Error deleting dimension: {str(e)}')
+    
+    return redirect('admin_settings')
+
+
+@login_required
+def add_pricing(request):
+    """
+    Add a new pricing configuration.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    if request.method == 'POST':
+        form = AdminEditPricingForm(request.POST)
+        if form.is_valid():
+            pricing = form.save()
+            messages.success(request, f'Pricing for {pricing.get_enrollment_type_display()} has been created successfully.')
+            return redirect('admin_settings')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditPricingForm()
+    
+    context = {
+        'form': form,
+        'page_title': 'Add New Pricing',
+    }
+    
+    return render(request, 'registrations/admin/edit_pricing.html', context)
+
+
+@login_required
+def edit_pricing(request, pricing_id):
+    """
+    Edit a pricing configuration.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    pricing = get_object_or_404(PricingConfig, id=pricing_id)
+    
+    if request.method == 'POST':
+        form = AdminEditPricingForm(request.POST, instance=pricing)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Pricing for {pricing.get_enrollment_type_display()} has been updated successfully.')
+            return redirect('admin_settings')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditPricingForm(instance=pricing)
+    
+    context = {
+        'form': form,
+        'pricing': pricing,
+        'page_title': 'Edit Pricing',
+    }
+    
+    return render(request, 'registrations/admin/edit_pricing.html', context)
+
+
+@login_required
+def delete_pricing(request, pricing_id):
+    """
+    Delete a pricing configuration.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    if request.method == 'POST':
+        try:
+            pricing = PricingConfig.objects.get(id=pricing_id)
+            pricing_type = pricing.get_enrollment_type_display()
+            pricing.delete()
+            messages.success(request, f'Pricing for {pricing_type} has been deleted successfully.')
+        except PricingConfig.DoesNotExist:
+            messages.error(request, 'Pricing configuration not found.')
+        except Exception as e:
+            messages.error(request, f'Error deleting pricing: {str(e)}')
+    
+    return redirect('admin_settings')
+
+
+@login_required
+def edit_program_settings(request):
+    """
+    Edit program settings.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    settings = ProgramSettings.load()
+    
+    if request.method == 'POST':
+        form = AdminEditProgramSettingsForm(request.POST, instance=settings)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Program settings have been updated successfully.')
+            return redirect('admin_settings')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditProgramSettingsForm(instance=settings)
+    
+    context = {
+        'form': form,
+        'settings': settings,
+        'page_title': 'Edit Program Settings',
+    }
+    
+    return render(request, 'registrations/admin/edit_program_settings.html', context)

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login - ASPIR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}" />
+  <style>
+    .login-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #0071e3 0%, #0066cc 100%);
+      padding: 24px;
+    }
+    
+    .login-card {
+      background: hsl(var(--admin-card));
+      border-radius: 24px;
+      padding: 48px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .login-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .login-logo {
+      height: 60px;
+      width: auto;
+      margin-bottom: 24px;
+    }
+    
+    .login-title {
+      font-size: var(--font-size-3xl);
+      font-weight: 800;
+      color: hsl(var(--admin-foreground));
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    
+    .login-subtitle {
+      font-size: var(--font-size-base);
+      color: hsl(var(--admin-muted-foreground));
+    }
+    
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    
+    .form-group-login {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .form-label-login {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: hsl(var(--admin-foreground));
+    }
+    
+    .form-input-login {
+      padding: 14px 16px;
+      border: 2px solid hsl(var(--admin-border));
+      border-radius: 12px;
+      font-size: var(--font-size-base);
+      transition: all var(--transition-base);
+      background: hsl(var(--admin-background));
+      color: hsl(var(--admin-foreground));
+    }
+    
+    .form-input-login:focus {
+      outline: none;
+      border-color: hsl(var(--admin-primary));
+      box-shadow: 0 0 0 3px hsla(var(--admin-primary), 0.1);
+    }
+    
+    .login-btn {
+      width: 100%;
+      padding: 16px;
+      background: #0071e3;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-top: 8px;
+      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.2);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .login-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
+      background: #0077ed;
+    }
+    
+    .login-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+    
+    .login-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .login-btn:hover::before {
+      left: 100%;
+    }
+    
+    .error-message {
+      background: hsla(0, 84%, 60%, 0.1);
+      color: hsl(0, 84%, 60%);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body class="admin-body">
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="{% static 'images/Elevate-Tribe-Bg-Remover.png' %}" alt="Logo" class="login-logo">
+        <h1 class="login-title">Admin Dashboard</h1>
+        <p class="login-subtitle">Sign in to manage ASPIR program</p>
+      </div>
+      
+      {% if messages %}
+        {% for message in messages %}
+          <div class="error-message">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+      
+      <form method="post" class="login-form">
+        {% csrf_token %}
+        <div class="form-group-login">
+          <label class="form-label-login" for="username">Username</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            class="form-input-login" 
+            placeholder="Enter your username"
+            required
+            autofocus
+          >
+        </div>
+        
+        <div class="form-group-login">
+          <label class="form-label-login" for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="form-input-login" 
+            placeholder="Enter your password"
+            required
+          >
+        </div>
+        
+        <button type="submit" class="login-btn">
+          Sign In
+          <iconify-icon icon="lucide:arrow-right" style="font-size: 20px; margin-left: 8px; vertical-align: middle;"></iconify-icon>
+        </button>
+      </form>
+    </div>
+  </div>
+  
+  <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
+</body>
+</html>
