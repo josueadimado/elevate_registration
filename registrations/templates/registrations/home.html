@@ -20,6 +20,10 @@
           <span class="check-status-text">Check Status</span>
         </a>
         <a href="{% url 'register' %}" class="btn btn-primary register-link" style="height: 44px; font-size: 15px; font-weight: 500; padding: 0 24px; border-radius: var(--radius-md); white-space: nowrap;">Enroll Now</a>
+        <a href="/admin-panel/login/" class="btn btn-outline" style="height: 44px; font-size: 14px; font-weight: 500; padding: 0 20px; border-radius: var(--radius-md); text-decoration: none; display: flex; align-items: center; gap: 6px; white-space: nowrap; color: #64748b; border-color: #e5e7eb;">
+          <iconify-icon icon="lucide:lock" style="font-size: 16px;"></iconify-icon>
+          <span class="admin-login-text">Admin</span>
+        </a>
       </div>
     </div>
   </nav>
@@ -1574,6 +1578,10 @@
         display: none;
       }
       
+      .admin-login-text {
+        display: none;
+      }
+      
       .register-link {
         height: 40px !important;
         font-size: 14px !important;
@@ -1799,6 +1807,10 @@
         height: 36px !important;
         font-size: 12px !important;
         padding: 0 12px !important;
+      }
+      
+      .admin-login-text {
+        display: none;
       }
       
       .register-link {

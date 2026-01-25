@@ -53,9 +53,16 @@ if path not in sys.path:
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'aspir_project.settings'
 
-activate_this = '/home/YOURUSERNAME/elevate_registration/venv/bin/activate_this.py'
-with open(activate_this) as f:
-    exec(f.read(), {'__file__': activate_this})
+# Add virtual environment's site-packages to Python path
+venv_path = '/home/YOURUSERNAME/elevate_registration/venv'
+if os.path.exists(venv_path):
+    # Try different Python versions
+    for py_version in ['python3.11', 'python3.10', 'python3.9']:
+        venv_site_packages = os.path.join(venv_path, 'lib', py_version, 'site-packages')
+        if os.path.exists(venv_site_packages):
+            if venv_site_packages not in sys.path:
+                sys.path.insert(0, venv_site_packages)
+            break
 
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()

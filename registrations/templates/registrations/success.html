@@ -9,8 +9,12 @@
       <a href="{% url 'home' %}" class="logo">
         <img src="{% static 'images/Elevate-Tribe-Bg-Remover.png' %}" alt="Elevate Tribe Logo" style="height: 60px; width: auto;">
       </a>
-      <div class="nav-links">
+      <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
         <a href="{% url 'home' %}" class="nav-link">Home</a>
+        <a href="/admin-panel/login/" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; background: transparent; color: #64748b; text-decoration: none; font-weight: 500; font-size: 14px; border: 1.5px solid #e5e7eb; transition: all 0.3s ease;" onmouseover="this.style.borderColor='#0071e3'; this.style.color='#0071e3'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.color='#64748b'">
+          <iconify-icon icon="lucide:lock" style="font-size: 14px;"></iconify-icon>
+          <span>Admin</span>
+        </a>
       </div>
     </div>
   </nav>

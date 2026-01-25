@@ -142,17 +142,35 @@ if path not in sys.path:
 # Set the Django settings module
 os.environ['DJANGO_SETTINGS_MODULE'] = 'aspir_project.settings'
 
-# Activate virtual environment
-activate_this = '/home/yourusername/elevate_registration/venv/bin/activate_this.py'
-with open(activate_this) as f:
-    exec(f.read(), {'__file__': activate_this})
+# Add virtual environment's site-packages to Python path
+venv_path = '/home/yourusername/elevate_registration/venv'
+if os.path.exists(venv_path):
+    # Try python3.10 first
+    venv_site_packages = os.path.join(venv_path, 'lib', 'python3.10', 'site-packages')
+    if os.path.exists(venv_site_packages):
+        if venv_site_packages not in sys.path:
+            sys.path.insert(0, venv_site_packages)
+    # Try python3.11 if 3.10 doesn't exist
+    else:
+        venv_site_packages = os.path.join(venv_path, 'lib', 'python3.11', 'site-packages')
+        if os.path.exists(venv_site_packages):
+            if venv_site_packages not in sys.path:
+                sys.path.insert(0, venv_site_packages)
+    # Try python3.9 if neither exists
+    else:
+        venv_site_packages = os.path.join(venv_path, 'lib', 'python3.9', 'site-packages')
+        if os.path.exists(venv_site_packages):
+            if venv_site_packages not in sys.path:
+                sys.path.insert(0, venv_site_packages)
 
 # Import Django WSGI application
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 ```
 
-**Important:** Replace `yourusername` with your actual PythonAnywhere username!
+**Important:** 
+- Replace `yourusername` with your actual PythonAnywhere username!
+- The code will automatically detect your Python version (3.9, 3.10, or 3.11)
 
 ### Configure Static Files
 
