@@ -159,6 +159,13 @@ SQUAD_SECRET_KEY = config('SQUAD_SECRET_KEY', default='')
 SQUAD_PUBLIC_KEY = config('SQUAD_PUBLIC_KEY', default='')
 # Use production URL for live site, sandbox for testing
 SQUAD_BASE_URL = config('SQUAD_BASE_URL', default='https://api-d.squadco.com' if not DEBUG else 'https://sandbox-api-d.squadco.com')
+
+# Paystack Payment Configuration (alternative gateway)
+PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='')
+PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY', default='')
+PAYSTACK_WEBHOOK_SECRET = config('PAYSTACK_WEBHOOK_SECRET', default='')
+PAYSTACK_BASE_URL = 'https://api.paystack.co'
+
 # USD to NGN exchange rate (fallback if API fails)
 USD_TO_NGN_RATE = config('USD_TO_NGN_RATE', default=1500.0, cast=float)  # Fallback rate
 

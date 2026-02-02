@@ -833,6 +833,12 @@
   letter-spacing: -0.01em;
 }
 
+.table-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .table-content {
   overflow-x: auto;
 }

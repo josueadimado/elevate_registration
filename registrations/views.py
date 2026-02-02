@@ -197,47 +197,90 @@ def initialize_payment(request):
     
     registration.save()
     
-    # Get payment option from form data
-    payment_option = request.POST.get('payment_option', 'partial')  # Default to partial
+    # Get payment option and gateway from form data
+    payment_option = request.POST.get('payment_option', 'partial')
+    payment_gateway = request.POST.get('payment_gateway', 'squad').lower()
     
     # Determine payment amount and reference based on option
     if payment_option == 'full':
-        # Full payment - charge total amount
         payment_amount = float(registration.amount)
         reference = f"ASPIR-FULL-{registration.id}"
         payment_type = 'full_payment'
     else:
-        # Partial payment - charge only registration fee
         payment_amount = float(registration.registration_fee_amount)
         reference = f"ASPIR-REG-{registration.id}"
         payment_type = 'registration_fee'
     
+    exchange_rate = get_usd_to_ngn_rate()
+    amount_in_ngn = payment_amount * exchange_rate
+    amount_in_kobo = int(amount_in_ngn * 100)
+    callback_url = request.build_absolute_uri(f'/success/?reference={reference}')
+    metadata = {
+        'student_name': registration.full_name,
+        'cohort': registration.cohort.name if registration.cohort else (registration.cohort_code or 'N/A'),
+        'group': registration.get_group_display(),
+        'dimension': registration.dimension.name if registration.dimension else (registration.dimension_code or 'N/A'),
+        'enrollment_type': registration.get_enrollment_type_display(),
+        'payment_type': payment_type,
+        'original_amount_usd': str(payment_amount),
+        'registration_fee': str(registration.registration_fee_amount),
+        'course_fee': str(registration.course_fee_amount),
+        'total_amount': str(registration.amount),
+        'exchange_rate': str(exchange_rate),
+    }
+    
+    # Branch by payment gateway
+    if payment_gateway == 'paystack' and getattr(settings, 'PAYSTACK_SECRET_KEY', None):
+        registration.paystack_reference = reference
+        registration.save()
+        try:
+            url = f"{settings.PAYSTACK_BASE_URL}/transaction/initialize"
+            headers = {
+                'Authorization': f'Bearer {settings.PAYSTACK_SECRET_KEY.strip()}',
+                'Content-Type': 'application/json',
+            }
+            payload = {
+                'email': registration.email,
+                'amount': amount_in_kobo,
+                'reference': reference,
+                'callback_url': callback_url,
+                'metadata': metadata,
+            }
+            response = requests.post(url, headers=headers, json=payload)
+            data = response.json()
+            if data.get('status') and data.get('data', {}).get('authorization_url'):
+                return JsonResponse({
+                    'status': 'success',
+                    'authorization_url': data['data']['authorization_url'],
+                    'reference': reference,
+                })
+            return JsonResponse({
+                'error': 'Paystack initialization failed',
+                'message': data.get('message', 'Unknown error'),
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'error': 'Payment initialization failed',
+                'message': str(e),
+            }, status=500)
+    
+    # Default: Squad
     registration.squad_reference = reference
     registration.save()
     
-    # Initialize Squad transaction
     url = f"{settings.SQUAD_BASE_URL}/transaction/initiate"
-    
     auth_key = settings.SQUAD_SECRET_KEY.strip()
     if not auth_key:
         return JsonResponse({
             'error': 'Squad API key not configured',
             'message': 'Please set SQUAD_SECRET_KEY in your .env file'
         }, status=500)
-    
     if not auth_key.startswith('Bearer '):
         auth_key = f'Bearer {auth_key}'
-    
     headers = {
         'Authorization': auth_key,
         'Content-Type': 'application/json',
     }
-    
-    # Convert amount from USD to NGN to kobo
-    exchange_rate = get_usd_to_ngn_rate()
-    amount_in_ngn = payment_amount * exchange_rate
-    amount_in_kobo = int(amount_in_ngn * 100)
-    
     payload = {
         'email': registration.email,
         'amount': str(amount_in_kobo),
@@ -245,28 +288,14 @@ def initialize_payment(request):
         'initiate_type': 'inline',
         'transaction_ref': reference,
         'customer_name': registration.full_name,
-        'callback_url': request.build_absolute_uri(f'/success/?reference={reference}'),
+        'callback_url': callback_url,
         'payment_channels': ['card', 'bank', 'ussd', 'transfer'],
-        'metadata': {
-            'student_name': registration.full_name,
-            'cohort': registration.cohort.name if registration.cohort else (registration.cohort_code or 'N/A'),
-            'group': registration.get_group_display(),
-            'dimension': registration.dimension.name if registration.dimension else (registration.dimension_code or 'N/A'),
-            'enrollment_type': registration.get_enrollment_type_display(),
-            'payment_type': payment_type,
-            'original_amount_usd': str(payment_amount),
-            'registration_fee': str(registration.registration_fee_amount),
-            'course_fee': str(registration.course_fee_amount),
-            'total_amount': str(registration.amount),
-            'exchange_rate': str(exchange_rate),
-        },
+        'metadata': metadata,
         'pass_charge': False,
     }
-    
     try:
         response = requests.post(url, headers=headers, json=payload)
         data = response.json()
-        
         if data.get('status') == 200 and data.get('data'):
             checkout_url = data['data'].get('checkout_url')
             if checkout_url:
@@ -275,35 +304,55 @@ def initialize_payment(request):
                     'authorization_url': checkout_url,
                     'reference': reference,
                 })
-            else:
-                error_message = data.get('message', 'No checkout URL returned')
-                return JsonResponse({
-                    'error': 'Failed to initialize payment',
-                    'message': error_message,
-                    'squad_response': data,
-                    'status_code': response.status_code
-                }, status=400)
-        else:
-            error_message = data.get('message', 'Unknown error')
             return JsonResponse({
                 'error': 'Failed to initialize payment',
-                'message': error_message,
+                'message': data.get('message', 'No checkout URL returned'),
                 'squad_response': data,
-                'status_code': response.status_code
             }, status=400)
-    
+        return JsonResponse({
+            'error': 'Failed to initialize payment',
+            'message': data.get('message', 'Unknown error'),
+            'squad_response': data,
+        }, status=400)
     except Exception as e:
         return JsonResponse({
             'error': 'Payment initialization failed',
-            'message': str(e)
+            'message': str(e),
         }, status=500)
+
+
+def _parse_gateway(request):
+    """Read payment_gateway from POST body (JSON or form). Default 'squad'."""
+    gateway = 'squad'
+    if request.content_type and 'application/json' in request.content_type:
+        try:
+            body = json.loads(request.body)
+            gateway = (body.get('payment_gateway') or body.get('gateway') or 'squad').lower()
+        except (json.JSONDecodeError, TypeError):
+            pass
+    else:
+        gateway = (request.POST.get('payment_gateway') or request.POST.get('gateway') or 'squad').lower()
+    return gateway if gateway in ('squad', 'paystack') else 'squad'
+
+
+def _parse_body_json(request):
+    """Read JSON body and return dict. Return {} if not JSON or invalid."""
+    if request.content_type and 'application/json' in request.content_type:
+        try:
+            return json.loads(request.body)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return {}
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def pay_registration_fee(request, registration_id):
     """
-    Initialize payment for registration fee (for existing registrations).
+    Initialize payment for registration fee OR full amount (for existing registrations).
+    Accepts optional JSON body: { "payment_gateway": "squad" | "paystack", "payment_option": "partial" | "full" }.
+    - partial: pay registration fee only (default)
+    - full: pay full amount (registration + course) in one go
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -313,37 +362,89 @@ def pay_registration_fee(request, registration_id):
     except Registration.DoesNotExist:
         return JsonResponse({'error': 'Registration not found'}, status=404)
     
-    # Check if registration fee is already paid
     if registration.registration_fee_paid:
         return JsonResponse({'error': 'Registration fee already paid'}, status=400)
     
-    # Generate unique reference for registration fee payment
-    reference = f"ASPIR-REG-{registration.id}"
+    body = _parse_body_json(request)
+    payment_option = (body.get('payment_option') or request.POST.get('payment_option') or 'partial').lower()
+    payment_option = 'full' if payment_option == 'full' else 'partial'
     
-    # Initialize Squad transaction
+    if payment_option == 'full':
+        reference = f"ASPIR-FULL-{registration.id}"
+        payment_amount = float(registration.amount)
+        payment_type = 'full_payment'
+    else:
+        reference = f"ASPIR-REG-{registration.id}"
+        payment_amount = float(registration.registration_fee_amount or registration.get_registration_fee())
+        payment_type = 'registration_fee'
+    
+    exchange_rate = get_usd_to_ngn_rate()
+    amount_in_ngn = payment_amount * exchange_rate
+    amount_in_kobo = int(amount_in_ngn * 100)
+    callback_url = request.build_absolute_uri(f'/success/?reference={reference}')
+    metadata = {
+        'student_name': registration.full_name,
+        'cohort': registration.cohort.name if registration.cohort else (registration.cohort_code or 'N/A'),
+        'group': registration.get_group_display(),
+        'dimension': registration.dimension.name if registration.dimension else (registration.dimension_code or 'N/A'),
+        'enrollment_type': registration.get_enrollment_type_display(),
+        'payment_type': payment_type,
+        'original_amount_usd': str(payment_amount),
+        'registration_fee': str(registration.registration_fee_amount),
+        'course_fee': str(registration.course_fee_amount),
+        'total_amount': str(registration.amount),
+        'exchange_rate': str(exchange_rate),
+    }
+    gateway = _parse_gateway(request)
+    
+    if gateway == 'paystack' and getattr(settings, 'PAYSTACK_SECRET_KEY', None):
+        registration.paystack_reference = reference
+        registration.save()
+        try:
+            url = f"{settings.PAYSTACK_BASE_URL}/transaction/initialize"
+            headers = {
+                'Authorization': f'Bearer {settings.PAYSTACK_SECRET_KEY.strip()}',
+                'Content-Type': 'application/json',
+            }
+            payload = {
+                'email': registration.email,
+                'amount': amount_in_kobo,
+                'reference': reference,
+                'callback_url': callback_url,
+                'metadata': metadata,
+            }
+            response = requests.post(url, headers=headers, json=payload)
+            data = response.json()
+            if data.get('status') and data.get('data', {}).get('authorization_url'):
+                return JsonResponse({
+                    'status': 'success',
+                    'authorization_url': data['data']['authorization_url'],
+                    'reference': reference,
+                })
+            return JsonResponse({
+                'error': 'Paystack initialization failed',
+                'message': data.get('message', 'Unknown error'),
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'error': 'Payment initialization failed',
+                'message': str(e),
+            }, status=500)
+    
+    # Squad
     url = f"{settings.SQUAD_BASE_URL}/transaction/initiate"
-    
     auth_key = settings.SQUAD_SECRET_KEY.strip()
     if not auth_key:
         return JsonResponse({
             'error': 'Squad API key not configured',
             'message': 'Please set SQUAD_SECRET_KEY in your .env file'
         }, status=500)
-    
     if not auth_key.startswith('Bearer '):
         auth_key = f'Bearer {auth_key}'
-    
     headers = {
         'Authorization': auth_key,
         'Content-Type': 'application/json',
     }
-    
-    # Convert registration fee from USD to NGN to kobo
-    exchange_rate = get_usd_to_ngn_rate()
-    reg_fee_amount = float(registration.registration_fee_amount or registration.get_registration_fee())
-    amount_in_ngn = reg_fee_amount * exchange_rate
-    amount_in_kobo = int(amount_in_ngn * 100)
-    
     payload = {
         'email': registration.email,
         'amount': str(amount_in_kobo),
@@ -351,53 +452,34 @@ def pay_registration_fee(request, registration_id):
         'initiate_type': 'inline',
         'transaction_ref': reference,
         'customer_name': registration.full_name,
-        'callback_url': request.build_absolute_uri(f'/success/?reference={reference}'),
+        'callback_url': callback_url,
         'payment_channels': ['card', 'bank', 'ussd', 'transfer'],
-        'metadata': {
-            'student_name': registration.full_name,
-            'cohort': registration.cohort.name if registration.cohort else (registration.cohort_code or 'N/A'),
-            'group': registration.get_group_display(),
-            'dimension': registration.dimension.name if registration.dimension else (registration.dimension_code or 'N/A'),
-            'enrollment_type': registration.get_enrollment_type_display(),
-            'payment_type': 'registration_fee',
-            'original_amount_usd': str(reg_fee_amount),
-            'registration_fee': str(registration.registration_fee_amount),
-            'course_fee': str(registration.course_fee_amount),
-            'total_amount': str(registration.amount),
-            'exchange_rate': str(exchange_rate),
-        },
+        'metadata': metadata,
         'pass_charge': False,
     }
-    
     try:
         response = requests.post(url, headers=headers, json=payload)
         data = response.json()
-        
         if data.get('status') == 200 and data.get('data'):
             checkout_url = data['data'].get('checkout_url')
             if checkout_url:
-                # Update registration with the reference
                 registration.squad_reference = reference
                 registration.save()
-                
                 return JsonResponse({
                     'status': 'success',
                     'authorization_url': checkout_url,
                     'reference': reference,
                 })
-            else:
-                return JsonResponse({
-                    'error': 'Failed to initialize payment',
-                    'message': 'No checkout URL returned',
-                    'squad_response': data
-                }, status=400)
-        else:
             return JsonResponse({
                 'error': 'Failed to initialize payment',
-                'message': data.get('message', 'Unknown error'),
+                'message': 'No checkout URL returned',
                 'squad_response': data
             }, status=400)
-    
+        return JsonResponse({
+            'error': 'Failed to initialize payment',
+            'message': data.get('message', 'Unknown error'),
+            'squad_response': data
+        }, status=400)
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
@@ -413,6 +495,7 @@ def pay_registration_fee(request, registration_id):
 def pay_course_fee(request, registration_id):
     """
     Initialize payment for remaining course fee.
+    Accepts optional JSON body: { "payment_gateway": "squad" | "paystack" }.
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -422,41 +505,80 @@ def pay_course_fee(request, registration_id):
     except Registration.DoesNotExist:
         return JsonResponse({'error': 'Registration not found'}, status=404)
     
-    # Check if course fee is already paid
     if registration.course_fee_paid:
         return JsonResponse({'error': 'Course fee already paid'}, status=400)
-    
-    # Check if registration fee is paid
     if not registration.registration_fee_paid:
         return JsonResponse({'error': 'Registration fee must be paid first'}, status=400)
     
-    # Generate unique reference for course fee payment
     reference = f"ASPIR-COURSE-{registration.id}"
+    exchange_rate = get_usd_to_ngn_rate()
+    course_fee_amount = float(registration.course_fee_amount or registration.get_course_fee())
+    amount_in_ngn = course_fee_amount * exchange_rate
+    amount_in_kobo = int(amount_in_ngn * 100)
+    callback_url = request.build_absolute_uri(f'/success/?reference={reference}')
+    metadata = {
+        'student_name': registration.full_name,
+        'cohort': registration.cohort.name if registration.cohort else (registration.cohort_code or 'N/A'),
+        'group': registration.get_group_display(),
+        'dimension': registration.dimension.name if registration.dimension else (registration.dimension_code or 'N/A'),
+        'enrollment_type': registration.get_enrollment_type_display(),
+        'payment_type': 'course_fee',
+        'original_amount_usd': str(course_fee_amount),
+        'registration_fee': str(registration.registration_fee_amount),
+        'course_fee': str(registration.course_fee_amount),
+        'total_amount': str(registration.amount),
+        'exchange_rate': str(exchange_rate),
+    }
+    gateway = _parse_gateway(request)
     
-    # Initialize Squad transaction
+    if gateway == 'paystack' and getattr(settings, 'PAYSTACK_SECRET_KEY', None):
+        registration.paystack_reference = reference
+        registration.save()
+        try:
+            url = f"{settings.PAYSTACK_BASE_URL}/transaction/initialize"
+            headers = {
+                'Authorization': f'Bearer {settings.PAYSTACK_SECRET_KEY.strip()}',
+                'Content-Type': 'application/json',
+            }
+            payload = {
+                'email': registration.email,
+                'amount': amount_in_kobo,
+                'reference': reference,
+                'callback_url': callback_url,
+                'metadata': metadata,
+            }
+            response = requests.post(url, headers=headers, json=payload)
+            data = response.json()
+            if data.get('status') and data.get('data', {}).get('authorization_url'):
+                return JsonResponse({
+                    'status': 'success',
+                    'authorization_url': data['data']['authorization_url'],
+                    'reference': reference,
+                })
+            return JsonResponse({
+                'error': 'Paystack initialization failed',
+                'message': data.get('message', 'Unknown error'),
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'error': 'Payment initialization failed',
+                'message': str(e),
+            }, status=500)
+    
+    # Squad
     url = f"{settings.SQUAD_BASE_URL}/transaction/initiate"
-    
     auth_key = settings.SQUAD_SECRET_KEY.strip()
     if not auth_key:
         return JsonResponse({
             'error': 'Squad API key not configured',
             'message': 'Please set SQUAD_SECRET_KEY in your .env file'
         }, status=500)
-    
     if not auth_key.startswith('Bearer '):
         auth_key = f'Bearer {auth_key}'
-    
     headers = {
         'Authorization': auth_key,
         'Content-Type': 'application/json',
     }
-    
-    # Convert course fee from USD to NGN to kobo
-    exchange_rate = get_usd_to_ngn_rate()
-    course_fee_amount = float(registration.course_fee_amount or registration.get_course_fee())
-    amount_in_ngn = course_fee_amount * exchange_rate
-    amount_in_kobo = int(amount_in_ngn * 100)
-    
     payload = {
         'email': registration.email,
         'amount': str(amount_in_kobo),
@@ -464,28 +586,14 @@ def pay_course_fee(request, registration_id):
         'initiate_type': 'inline',
         'transaction_ref': reference,
         'customer_name': registration.full_name,
-        'callback_url': request.build_absolute_uri(f'/success/?reference={reference}'),
+        'callback_url': callback_url,
         'payment_channels': ['card', 'bank', 'ussd', 'transfer'],
-        'metadata': {
-            'student_name': registration.full_name,
-            'cohort': registration.cohort.name if registration.cohort else (registration.cohort_code or 'N/A'),
-            'group': registration.get_group_display(),
-            'dimension': registration.dimension.name if registration.dimension else (registration.dimension_code or 'N/A'),
-            'enrollment_type': registration.get_enrollment_type_display(),
-            'payment_type': 'course_fee',
-            'original_amount_usd': str(course_fee_amount),
-            'registration_fee': str(registration.registration_fee_amount),
-            'course_fee': str(registration.course_fee_amount),
-            'total_amount': str(registration.amount),
-            'exchange_rate': str(exchange_rate),
-        },
+        'metadata': metadata,
         'pass_charge': False,
     }
-    
     try:
         response = requests.post(url, headers=headers, json=payload)
         data = response.json()
-        
         if data.get('status') == 200 and data.get('data'):
             checkout_url = data['data'].get('checkout_url')
             if checkout_url:
@@ -494,19 +602,16 @@ def pay_course_fee(request, registration_id):
                     'authorization_url': checkout_url,
                     'reference': reference,
                 })
-            else:
-                return JsonResponse({
-                    'error': 'Failed to initialize payment',
-                    'message': 'No checkout URL returned',
-                    'squad_response': data
-                }, status=400)
-        else:
             return JsonResponse({
                 'error': 'Failed to initialize payment',
-                'message': data.get('message', 'Unknown error'),
+                'message': 'No checkout URL returned',
                 'squad_response': data
             }, status=400)
-    
+        return JsonResponse({
+            'error': 'Failed to initialize payment',
+            'message': data.get('message', 'Unknown error'),
+            'squad_response': data
+        }, status=400)
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
@@ -738,6 +843,124 @@ def squad_webhook(request):
         return HttpResponse('Invalid JSON', status=400)
     except Exception as e:
         return HttpResponse(f'Error: {str(e)}', status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def paystack_webhook(request):
+    """
+    Handle Paystack webhook notifications (charge.success).
+    Updates registration status and sends emails.
+    """
+    from .models import Transaction
+    from django.utils.dateparse import parse_datetime
+    from django.utils import timezone as tz
+
+    raw_body = request.body
+    signature = request.headers.get('X-Paystack-Signature', '')
+    secret = getattr(settings, 'PAYSTACK_WEBHOOK_SECRET', None)
+    if secret:
+        computed = hmac.new(
+            secret.encode('utf-8'),
+            raw_body,
+            hashlib.sha512
+        ).hexdigest()
+        if not hmac.compare_digest(computed, signature):
+            return HttpResponse('Invalid signature', status=401)
+
+    try:
+        payload = json.loads(raw_body)
+    except json.JSONDecodeError:
+        return HttpResponse('Invalid JSON', status=400)
+
+    event = payload.get('event')
+    if event != 'charge.success':
+        return HttpResponse('Event not handled', status=200)
+
+    data = payload.get('data', {})
+    reference = data.get('reference')
+    if not reference:
+        return HttpResponse('Missing reference', status=400)
+
+    try:
+        if reference.startswith('ASPIR-REG-'):
+            registration_id = reference[len('ASPIR-REG-'):]
+            registration = Registration.objects.get(id=registration_id)
+        elif reference.startswith('ASPIR-COURSE-'):
+            registration_id = reference[len('ASPIR-COURSE-'):]
+            registration = Registration.objects.get(id=registration_id)
+        elif reference.startswith('ASPIR-FULL-'):
+            registration_id = reference[len('ASPIR-FULL-'):]
+            registration = Registration.objects.get(id=registration_id)
+        else:
+            registration = Registration.objects.get(paystack_reference=reference)
+    except Registration.DoesNotExist:
+        return HttpResponse('Registration not found', status=404)
+
+    metadata = data.get('metadata', {}) or {}
+    payment_type = metadata.get('payment_type', '')
+    if reference.startswith('ASPIR-FULL-'):
+        payment_type = 'full_payment'
+    elif reference.startswith('ASPIR-REG-'):
+        payment_type = 'registration_fee'
+    elif reference.startswith('ASPIR-COURSE-'):
+        payment_type = 'course_fee'
+
+    if payment_type == 'full_payment' or reference.startswith('ASPIR-FULL-'):
+        registration.registration_fee_paid = True
+        registration.course_fee_paid = True
+        registration.status = 'PAID'
+    elif payment_type == 'registration_fee' or reference.startswith('ASPIR-REG-'):
+        registration.registration_fee_paid = True
+        registration.status = 'PENDING'
+    elif payment_type == 'course_fee' or reference.startswith('ASPIR-COURSE-'):
+        registration.course_fee_paid = True
+        registration.status = 'PAID' if registration.registration_fee_paid else 'PENDING'
+    else:
+        registration.registration_fee_paid = True
+        registration.course_fee_paid = True
+        registration.status = 'PAID'
+    registration.save()
+
+    try:
+        if payment_type == 'full_payment' or reference.startswith('ASPIR-FULL-'):
+            send_payment_complete_email(registration)
+        elif payment_type == 'registration_fee' or reference.startswith('ASPIR-REG-'):
+            send_registration_confirmation_email(registration)
+        elif payment_type == 'course_fee' or reference.startswith('ASPIR-COURSE-'):
+            if registration.is_fully_paid():
+                send_payment_complete_email(registration)
+            else:
+                send_course_fee_payment_email(registration)
+        else:
+            send_payment_complete_email(registration)
+    except Exception as email_error:
+        import logging
+        logging.getLogger(__name__).error(f"Paystack webhook email error: {email_error}")
+
+    exchange_rate = float(metadata.get('exchange_rate', 0)) or get_usd_to_ngn_rate()
+    amount_in_kobo = float(data.get('amount', 0))
+    amount_in_ngn = amount_in_kobo / 100
+    amount_in_usd = amount_in_ngn / exchange_rate
+    paid_at = None
+    if data.get('paid_at'):
+        try:
+            paid_at = parse_datetime(data['paid_at'])
+        except Exception:
+            paid_at = tz.now()
+    else:
+        paid_at = tz.now()
+
+    Transaction.objects.create(
+        registration=registration,
+        reference=reference,
+        amount=amount_in_usd,
+        currency='USD',
+        paid_at=paid_at,
+        channel=data.get('channel', '') or 'paystack',
+        raw_payload=data,
+    )
+    return HttpResponse('OK', status=200)
 
 
 def check_status(request):

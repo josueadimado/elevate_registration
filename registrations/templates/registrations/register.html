@@ -287,7 +287,8 @@
               
               <!-- Payment Option Toggle -->
               <div class="payment-options" style="background: rgba(139, 92, 246, 0.05); border: 2px solid rgba(139, 92, 246, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                <label style="display: block; font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 12px;">Payment Option:</label>
+                <label style="display: block; font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 4px;">Payment option:</label>
+                <p style="font-size: 12px; color: #64748b; margin: 0 0 12px 0;">Choose to pay registration fee only (and course fee later) or the full amount now.</p>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                   <label class="payment-option-label" style="display: flex; align-items: center; gap: 10px; padding: 14px; background: rgba(139, 92, 246, 0.05); border: 2px solid #8b5cf6; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;" id="payment-option-partial-label">
                     <input type="radio" name="payment_option" id="payment-option-partial" value="partial" checked style="width: 18px; height: 18px; accent-color: #8b5cf6; cursor: pointer; flex-shrink: 0;">
@@ -305,6 +306,29 @@
                       <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Pay $<span id="full-total-fee">{{ pricing_config.total_amount|floatformat:2 }}</span> (≈ ₦<span id="full-total-fee-ngn">{{ current_total_ngn|floatformat:0 }}</span>) now and complete enrollment</div>
                     </div>
                     <iconify-icon icon="lucide:check-circle-2" style="font-size: 20px; color: #34c759; flex-shrink: 0;"></iconify-icon>
+                  </label>
+                </div>
+              </div>
+              
+              <!-- Payment Platform Choice -->
+              <div class="payment-platform-options" style="background: rgba(0, 113, 227, 0.05); border: 2px solid rgba(0, 113, 227, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                <label style="display: block; font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 12px;">Payment platform:</label>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <label class="gateway-option-label" style="display: flex; align-items: center; gap: 10px; padding: 14px; background: white; border: 2px solid #0071e3; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;" id="gateway-squad-label">
+                    <input type="radio" name="payment_gateway" id="gateway-squad" value="squad" checked style="width: 18px; height: 18px; accent-color: #0071e3; cursor: pointer; flex-shrink: 0;">
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 14px;">Squad</div>
+                      <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Card, Bank, USSD, Transfer</div>
+                    </div>
+                    <iconify-icon icon="lucide:credit-card" style="font-size: 20px; color: #0071e3; flex-shrink: 0;"></iconify-icon>
+                  </label>
+                  <label class="gateway-option-label" style="display: flex; align-items: center; gap: 10px; padding: 14px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;" id="gateway-paystack-label">
+                    <input type="radio" name="payment_gateway" id="gateway-paystack" value="paystack" style="width: 18px; height: 18px; accent-color: #00c3f7; cursor: pointer; flex-shrink: 0;">
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 14px;">Paystack</div>
+                      <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Card, Bank, USSD, Transfer (alternative)</div>
+                    </div>
+                    <iconify-icon icon="lucide:wallet" style="font-size: 20px; color: #00c3f7; flex-shrink: 0;"></iconify-icon>
                   </label>
                 </div>
               </div>
@@ -1743,6 +1767,8 @@
         // Add payment option to form data
         const paymentOption = document.querySelector('input[name="payment_option"]:checked')?.value || 'partial';
         formData.set('payment_option', paymentOption);
+        const paymentGateway = document.querySelector('input[name="payment_gateway"]:checked')?.value || 'squad';
+        formData.set('payment_gateway', paymentGateway);
         
         if (phoneInstance && phoneInput) {
           const internationalNumber = phoneInstance.getNumber();

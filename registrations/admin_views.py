@@ -1,12 +1,13 @@
 """
 Custom admin dashboard views for managing registrations and program settings.
 """
+import csv
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from datetime import timedelta
 from .models import (
     Registration, Transaction, Cohort, Dimension, 
@@ -132,42 +133,16 @@ def admin_registrations(request):
     """
     View all registrations with filtering and search.
     """
-    registrations = Registration.objects.select_related(
-        'cohort', 'dimension'
-    ).order_by('-created_at')
-    
-    # Filtering
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    registrations = _get_filtered_registrations_queryset(request)
     status_filter = request.GET.get('status', '')
     cohort_filter = request.GET.get('cohort', '')
     dimension_filter = request.GET.get('dimension', '')
     search_query = request.GET.get('search', '')
-    
-    if status_filter:
-        registrations = registrations.filter(status=status_filter)
-    
-    if cohort_filter:
-        registrations = registrations.filter(cohort_id=cohort_filter)
-    
-    if dimension_filter:
-        registrations = registrations.filter(dimension_id=dimension_filter)
-    
-    if search_query:
-        registrations = registrations.filter(
-            Q(full_name__icontains=search_query) |
-            Q(email__icontains=search_query) |
-            Q(phone__icontains=search_query) |
-            Q(squad_reference__icontains=search_query) |
-            Q(paystack_reference__icontains=search_query)  # Legacy support
-        )
-    
-    # Get filter options
     cohorts = Cohort.objects.filter(is_active=True)
     dimensions = Dimension.objects.filter(is_active=True)
-    
-    if not request.user.is_staff:
-        messages.error(request, 'You do not have permission to access this page.')
-        return redirect('admin_login')
-    
     context = {
         'registrations': registrations,
         'cohorts': cohorts,
@@ -177,8 +152,83 @@ def admin_registrations(request):
         'dimension_filter': dimension_filter,
         'search_query': search_query,
     }
-    
     return render(request, 'registrations/admin/registrations.html', context)
+
+
+def _get_filtered_registrations_queryset(request):
+    """
+    Returns the same filtered registrations queryset used on the list page.
+    Used by admin_registrations and export_registrations.
+    """
+    registrations = Registration.objects.select_related(
+        'cohort', 'dimension'
+    ).order_by('-created_at')
+    status_filter = request.GET.get('status', '')
+    cohort_filter = request.GET.get('cohort', '')
+    dimension_filter = request.GET.get('dimension', '')
+    search_query = request.GET.get('search', '')
+    if status_filter:
+        registrations = registrations.filter(status=status_filter)
+    if cohort_filter:
+        registrations = registrations.filter(cohort_id=cohort_filter)
+    if dimension_filter:
+        registrations = registrations.filter(dimension_id=dimension_filter)
+    if search_query:
+        registrations = registrations.filter(
+            Q(full_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(phone__icontains=search_query) |
+            Q(squad_reference__icontains=search_query) |
+            Q(paystack_reference__icontains=search_query)
+        )
+    return registrations
+
+
+@login_required
+def export_registrations(request):
+    """
+    Export the registrations list as CSV, respecting current filters.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    registrations = _get_filtered_registrations_queryset(request)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = (
+        'attachment; filename="registrations_%s.csv"' % timezone.now().strftime('%Y-%m-%d_%H-%M')
+    )
+    writer = csv.writer(response)
+    # Header row
+    writer.writerow([
+        'Name', 'Email', 'Phone', 'Country', 'Age', 'Group', 'Cohort', 'Dimension',
+        'Enrollment Type', 'Amount', 'Currency', 'Status', 'Registration Fee Paid',
+        'Course Fee Paid', 'Reference (Squad)', 'Reference (Paystack)', 'Guardian Name',
+        'Guardian Phone', 'Referral Source', 'Created At'
+    ])
+    for r in registrations:
+        writer.writerow([
+            r.full_name or '',
+            r.email or '',
+            r.phone or '',
+            r.country or '',
+            r.age or '',
+            r.get_group_display() if r.group else '',
+            r.cohort.name if r.cohort else '',
+            r.dimension.name if r.dimension else (r.dimension_code or ''),
+            r.get_enrollment_type_display() if r.enrollment_type else '',
+            r.amount or '',
+            r.currency or '',
+            r.status or '',
+            'Yes' if r.registration_fee_paid else 'No',
+            'Yes' if r.course_fee_paid else 'No',
+            r.squad_reference or (r.paystack_reference or ''),
+            r.paystack_reference or '',
+            r.guardian_name or '',
+            r.guardian_phone or '',
+            r.referral_source or '',
+            r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
+        ])
+    return response
 
 
 @login_required
