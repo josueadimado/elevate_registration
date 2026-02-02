@@ -18,6 +18,40 @@ import requests
 import json
 import hmac
 import hashlib
+import time
+
+
+def _unique_ref(prefix, registration_id):
+    """Generate a unique transaction reference per attempt to avoid 'Duplicate Transaction Reference'."""
+    return f"{prefix}{registration_id}-{int(time.time())}"
+
+
+def _registration_id_from_ref(reference, prefix):
+    """Extract registration ID from reference (e.g. ASPIR-REG-{uuid}-{timestamp} -> uuid). UUID is 36 chars."""
+    if not reference.startswith(prefix):
+        return None
+    rest = reference[len(prefix):]
+    return rest[:36] if len(rest) >= 36 else rest
+
+
+def _registration_from_ref(reference):
+    """Resolve a reference (with optional attempt suffix) to a Registration. Raises Registration.DoesNotExist."""
+    if reference.startswith('ASPIR-REG-'):
+        rid = _registration_id_from_ref(reference, 'ASPIR-REG-')
+        if rid:
+            return Registration.objects.get(id=rid)
+    if reference.startswith('ASPIR-COURSE-'):
+        rid = _registration_id_from_ref(reference, 'ASPIR-COURSE-')
+        if rid:
+            return Registration.objects.get(id=rid)
+    if reference.startswith('ASPIR-FULL-'):
+        rid = _registration_id_from_ref(reference, 'ASPIR-FULL-')
+        if rid:
+            return Registration.objects.get(id=rid)
+    try:
+        return Registration.objects.get(squad_reference=reference)
+    except Registration.DoesNotExist:
+        return Registration.objects.get(paystack_reference=reference)
 
 
 def home(request):
@@ -153,26 +187,7 @@ def success(request):
     
     if reference:
         try:
-            # Handle ASPIR-REG-{id}, ASPIR-COURSE-{id}, and ASPIR-FULL-{id} formats
-            if reference.startswith('ASPIR-REG-'):
-                # Extract registration ID from reference (everything after "ASPIR-REG-")
-                registration_id = reference[len('ASPIR-REG-'):]
-                registration = Registration.objects.get(id=registration_id)
-            elif reference.startswith('ASPIR-COURSE-'):
-                # Extract registration ID from reference (everything after "ASPIR-COURSE-")
-                registration_id = reference[len('ASPIR-COURSE-'):]
-                registration = Registration.objects.get(id=registration_id)
-            elif reference.startswith('ASPIR-FULL-'):
-                # Extract registration ID from reference (everything after "ASPIR-FULL-")
-                registration_id = reference[len('ASPIR-FULL-'):]
-                registration = Registration.objects.get(id=registration_id)
-            else:
-                # Try squad_reference first, fallback to paystack_reference for backward compatibility
-                try:
-                    registration = Registration.objects.get(squad_reference=reference)
-                except Registration.DoesNotExist:
-                    registration = Registration.objects.get(paystack_reference=reference)
-            
+            registration = _registration_from_ref(reference)
             # Get exchange rate for display
             exchange_rate = get_usd_to_ngn_rate()
             
@@ -253,14 +268,14 @@ def initialize_payment(request):
     payment_option = request.POST.get('payment_option', 'partial')
     payment_gateway = request.POST.get('payment_gateway', 'squad').lower()
     
-    # Determine payment amount and reference based on option
+    # Determine payment amount and reference based on option (unique ref per attempt to avoid Duplicate Transaction Reference)
     if payment_option == 'full':
         payment_amount = float(registration.amount)
-        reference = f"ASPIR-FULL-{registration.id}"
+        reference = _unique_ref("ASPIR-FULL-", str(registration.id))
         payment_type = 'full_payment'
     else:
         payment_amount = float(registration.registration_fee_amount)
-        reference = f"ASPIR-REG-{registration.id}"
+        reference = _unique_ref("ASPIR-REG-", str(registration.id))
         payment_type = 'registration_fee'
     
     exchange_rate = get_usd_to_ngn_rate()
@@ -422,11 +437,11 @@ def pay_registration_fee(request, registration_id):
     payment_option = 'full' if payment_option == 'full' else 'partial'
     
     if payment_option == 'full':
-        reference = f"ASPIR-FULL-{registration.id}"
+        reference = _unique_ref("ASPIR-FULL-", str(registration.id))
         payment_amount = float(registration.amount)
         payment_type = 'full_payment'
     else:
-        reference = f"ASPIR-REG-{registration.id}"
+        reference = _unique_ref("ASPIR-REG-", str(registration.id))
         payment_amount = float(registration.registration_fee_amount or registration.get_registration_fee())
         payment_type = 'registration_fee'
     
@@ -562,7 +577,7 @@ def pay_course_fee(request, registration_id):
     if not registration.registration_fee_paid:
         return JsonResponse({'error': 'Registration fee must be paid first'}, status=400)
     
-    reference = f"ASPIR-COURSE-{registration.id}"
+    reference = _unique_ref("ASPIR-COURSE-", str(registration.id))
     exchange_rate = get_usd_to_ngn_rate()
     course_fee_amount = float(registration.course_fee_amount or registration.get_course_fee())
     amount_in_ngn = course_fee_amount * exchange_rate
@@ -684,19 +699,7 @@ def verify_payment(request):
         return JsonResponse({'error': 'Reference is required'}, status=400)
     
     try:
-        # Handle ASPIR-REG-{id}, ASPIR-COURSE-{id}, and ASPIR-FULL-{id} formats
-        if reference.startswith('ASPIR-REG-'):
-            registration_id = reference[len('ASPIR-REG-'):]
-            registration = Registration.objects.get(id=registration_id)
-        elif reference.startswith('ASPIR-COURSE-'):
-            registration_id = reference[len('ASPIR-COURSE-'):]
-            registration = Registration.objects.get(id=registration_id)
-        elif reference.startswith('ASPIR-FULL-'):
-            registration_id = reference[len('ASPIR-FULL-'):]
-            registration = Registration.objects.get(id=registration_id)
-        else:
-            registration = Registration.objects.get(squad_reference=reference)
-        
+        registration = _registration_from_ref(reference)
         # Verify with Squad API
         url = f"{settings.SQUAD_BASE_URL}/transaction"
         
@@ -771,24 +774,7 @@ def squad_webhook(request):
                 return HttpResponse('Missing transaction reference', status=400)
             
             try:
-                # Try to find registration by reference (could be registration fee, course fee, or full payment)
-                # Handle ASPIR-REG-{id}, ASPIR-COURSE-{id}, and ASPIR-FULL-{id} formats
-                if transaction_ref.startswith('ASPIR-REG-'):
-                    # Extract registration ID from reference (everything after "ASPIR-REG-")
-                    registration_id = transaction_ref[len('ASPIR-REG-'):]
-                    registration = Registration.objects.get(id=registration_id)
-                elif transaction_ref.startswith('ASPIR-COURSE-'):
-                    # Extract registration ID from reference (everything after "ASPIR-COURSE-")
-                    registration_id = transaction_ref[len('ASPIR-COURSE-'):]
-                    registration = Registration.objects.get(id=registration_id)
-                elif transaction_ref.startswith('ASPIR-FULL-'):
-                    # Extract registration ID from reference (everything after "ASPIR-FULL-")
-                    registration_id = transaction_ref[len('ASPIR-FULL-'):]
-                    registration = Registration.objects.get(id=registration_id)
-                else:
-                    # Legacy format: try direct lookup
-                    registration = Registration.objects.get(squad_reference=transaction_ref)
-                
+                registration = _registration_from_ref(transaction_ref)
                 # Update registration status
                 transaction_status = body.get('transaction_status', '').lower()
                 if transaction_status == 'success':
@@ -935,17 +921,7 @@ def paystack_webhook(request):
         return HttpResponse('Missing reference', status=400)
 
     try:
-        if reference.startswith('ASPIR-REG-'):
-            registration_id = reference[len('ASPIR-REG-'):]
-            registration = Registration.objects.get(id=registration_id)
-        elif reference.startswith('ASPIR-COURSE-'):
-            registration_id = reference[len('ASPIR-COURSE-'):]
-            registration = Registration.objects.get(id=registration_id)
-        elif reference.startswith('ASPIR-FULL-'):
-            registration_id = reference[len('ASPIR-FULL-'):]
-            registration = Registration.objects.get(id=registration_id)
-        else:
-            registration = Registration.objects.get(paystack_reference=reference)
+        registration = _registration_from_ref(reference)
     except Registration.DoesNotExist:
         return HttpResponse('Registration not found', status=404)
 
@@ -1038,25 +1014,10 @@ def check_status(request):
                 error_message = 'An error occurred. Please try again.'
         elif reference:
             try:
-                # Handle ASPIR-REG-{id}, ASPIR-COURSE-{id}, and ASPIR-FULL-{id} formats
-                if reference.startswith('ASPIR-REG-'):
-                    registration_id = reference[len('ASPIR-REG-'):]
-                    registration = Registration.objects.get(id=registration_id)
-                elif reference.startswith('ASPIR-COURSE-'):
-                    registration_id = reference[len('ASPIR-COURSE-'):]
-                    registration = Registration.objects.get(id=registration_id)
-                elif reference.startswith('ASPIR-FULL-'):
-                    registration_id = reference[len('ASPIR-FULL-'):]
-                    registration = Registration.objects.get(id=registration_id)
-                else:
-                    # Try squad_reference first, fallback to paystack_reference
-                    try:
-                        registration = Registration.objects.get(squad_reference=reference)
-                    except Registration.DoesNotExist:
-                        registration = Registration.objects.get(paystack_reference=reference)
+                registration = _registration_from_ref(reference)
             except Registration.DoesNotExist:
                 error_message = 'No registration found with this reference number.'
-            except Exception as e:
+            except Exception:
                 error_message = 'An error occurred. Please try again.'
         else:
             error_message = 'Please enter either your email address or reference number.'
