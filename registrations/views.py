@@ -87,6 +87,17 @@ def register(request):
         current_total_ngn = 0
     
     if request.method == 'POST':
+        # If this email is already registered, send them to the payment page instead of creating a duplicate
+        email = (request.POST.get('email') or '').strip()
+        if email:
+            existing = (
+                Registration.objects.filter(email__iexact=email)
+                .order_by('-created_at')
+                .first()
+            )
+            if existing:
+                ref = f'ASPIR-REG-{existing.id}'
+                return redirect(reverse('success') + f'?reference={ref}')
         form = RegistrationForm(request.POST)
         if form.is_valid():
             registration = form.save(commit=False)
@@ -110,6 +121,28 @@ def register(request):
         'current_total_ngn': current_total_ngn,
     }
     return render(request, 'registrations/register.html', context)
+
+
+def check_email(request):
+    """
+    API: Check if an email is already registered. Used on the register page
+    to show "Complete your payment" when the user enters an existing email.
+    """
+    email = (request.GET.get('email') or request.POST.get('email') or '').strip()
+    if not email:
+        return JsonResponse({'exists': False, 'redirect_url': None})
+    existing = (
+        Registration.objects.filter(email__iexact=email)
+        .order_by('-created_at')
+        .first()
+    )
+    if existing:
+        ref = f'ASPIR-REG-{existing.id}'
+        redirect_url = request.build_absolute_uri(
+            reverse('success') + f'?reference={ref}'
+        )
+        return JsonResponse({'exists': True, 'redirect_url': redirect_url})
+    return JsonResponse({'exists': False, 'redirect_url': None})
 
 
 def success(request):
@@ -171,6 +204,25 @@ def initialize_payment(request):
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    # If this email is already registered, tell the frontend to redirect to the payment page
+    email = (request.POST.get('email') or '').strip()
+    if email:
+        existing = (
+            Registration.objects.filter(email__iexact=email)
+            .order_by('-created_at')
+            .first()
+        )
+        if existing:
+            ref = f'ASPIR-REG-{existing.id}'
+            redirect_url = request.build_absolute_uri(
+                reverse('success') + f'?reference={ref}'
+            )
+            return JsonResponse({
+                'status': 'already_registered',
+                'redirect_url': redirect_url,
+                'message': 'This email is already registered. Redirecting you to complete your payment.',
+            })
     
     form = RegistrationForm(request.POST)
     if not form.is_valid():

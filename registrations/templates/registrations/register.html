@@ -108,6 +108,10 @@
                     {{ form.email }}
                     <iconify-icon icon="lucide:mail" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 18px; color: #9ca3af;"></iconify-icon>
                   </div>
+                  <div id="email-already-registered-message" style="display: none; margin-top: 10px; padding: 12px 16px; background: rgba(0, 113, 227, 0.1); border: 1px solid rgba(0, 113, 227, 0.25); border-radius: 12px; font-size: 14px; color: #1d1d1f;">
+                    <iconify-icon icon="lucide:info" style="vertical-align: middle; margin-right: 6px; color: #0071e3;"></iconify-icon>
+                    This email is already registered. <a id="email-already-registered-link" href="#" style="color: #0071e3; font-weight: 600; text-decoration: none;">Complete your payment →</a>
+                  </div>
                   {% if form.email.errors %}
                     <div style="color: #ef4444; font-size: 12px; margin-top: 4px;">{{ form.email.errors }}</div>
                   {% endif %}
@@ -1393,6 +1397,39 @@
     const phoneInput = document.querySelector('input[name="phone"]');
     const guardianPhoneInput = document.querySelector('input[name="guardian_phone"]');
     const countryInput = document.querySelector('select[name="country"]');
+    const emailInput = document.querySelector('input[name="email"]');
+    const emailAlreadyMsg = document.getElementById('email-already-registered-message');
+    const emailAlreadyLink = document.getElementById('email-already-registered-link');
+    
+    // Check if email is already registered (on blur) — show "Complete your payment" link
+    if (emailInput && emailAlreadyMsg && emailAlreadyLink) {
+      let checkEmailTimeout = null;
+      function checkEmailExists() {
+        const email = (emailInput.value || '').trim();
+        if (!email) {
+          emailAlreadyMsg.style.display = 'none';
+          return;
+        }
+        fetch('{% url "check_email" %}?email=' + encodeURIComponent(email))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.exists && data.redirect_url) {
+              emailAlreadyLink.href = data.redirect_url;
+              emailAlreadyMsg.style.display = 'block';
+            } else {
+              emailAlreadyMsg.style.display = 'none';
+            }
+          })
+          .catch(function() { emailAlreadyMsg.style.display = 'none'; });
+      }
+      emailInput.addEventListener('blur', function() {
+        if (checkEmailTimeout) clearTimeout(checkEmailTimeout);
+        checkEmailTimeout = setTimeout(checkEmailExists, 300);
+      });
+      emailInput.addEventListener('input', function() {
+        if ((emailInput.value || '').trim() === '') emailAlreadyMsg.style.display = 'none';
+      });
+    }
     
     // Dimension mapping: code -> ID
     const dimensionMap = {
@@ -1799,6 +1836,9 @@
           if (data.status === 'success' && data.authorization_url) {
             // Smooth redirect
             window.location.href = data.authorization_url;
+          } else if (data.status === 'already_registered' && data.redirect_url) {
+            // Email already registered — send them to the payment page
+            window.location.href = data.redirect_url;
           } else {
             // Show detailed error messages
             let errorMessage = data.message || 'Failed to initialize payment';
