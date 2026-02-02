@@ -1428,6 +1428,33 @@
       emailInput.addEventListener('input', function() {
         if ((emailInput.value || '').trim() === '') emailAlreadyLink.style.display = 'none';
       });
+      // On click: go to payment page (no form needed). Use JS redirect so it works even if href wasn't set.
+      emailAlreadyLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        var url = emailAlreadyLink.href;
+        if (url && url !== '#' && url.indexOf('#') !== 0) {
+          window.location.href = url;
+          return;
+        }
+        var email = (emailInput.value || '').trim();
+        if (!email) return;
+        emailAlreadyLink.style.pointerEvents = 'none';
+        emailAlreadyLink.textContent = 'Redirecting...';
+        fetch('{% url "check_email" %}?email=' + encodeURIComponent(email))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.redirect_url) {
+              window.location.href = data.redirect_url;
+            } else {
+              emailAlreadyLink.style.pointerEvents = '';
+              emailAlreadyLink.innerHTML = '<iconify-icon icon="lucide:info" style="vertical-align: middle; margin-right: 6px; color: #0071e3;"></iconify-icon>This email is already registered. <span style="color: #0071e3; font-weight: 600;">Complete your payment →</span>';
+            }
+          })
+          .catch(function() {
+            emailAlreadyLink.style.pointerEvents = '';
+            emailAlreadyLink.innerHTML = '<iconify-icon icon="lucide:info" style="vertical-align: middle; margin-right: 6px; color: #0071e3;"></iconify-icon>This email is already registered. <span style="color: #0071e3; font-weight: 600;">Complete your payment →</span>';
+          });
+      });
     }
     
     // Dimension mapping: code -> ID
