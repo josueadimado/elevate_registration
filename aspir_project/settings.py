@@ -157,8 +157,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Squad Payment Configuration
 SQUAD_SECRET_KEY = config('SQUAD_SECRET_KEY', default='')
 SQUAD_PUBLIC_KEY = config('SQUAD_PUBLIC_KEY', default='')
-# Use production URL for live site, sandbox for testing
-SQUAD_BASE_URL = config('SQUAD_BASE_URL', default='https://api-d.squadco.com' if not DEBUG else 'https://sandbox-api-d.squadco.com')
+# Use production URL for live site, sandbox for testing.
+_squad_base = config('SQUAD_BASE_URL', default='')
+if not _squad_base:
+    _squad_base = 'https://api-d.squadco.com' if not DEBUG else 'https://sandbox-api-d.squadco.com'
+# Safeguard: live host must never use Squad sandbox (fix truncation or wrong env)
+if 'elevatetribelearning.com' in str(ALLOWED_HOSTS) or not _squad_base.endswith('.com'):
+    _squad_base = 'https://api-d.squadco.com'
+SQUAD_BASE_URL = _squad_base
 
 # Paystack Payment Configuration (alternative gateway)
 PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='')

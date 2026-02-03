@@ -331,10 +331,10 @@ def initialize_payment(request):
                 'message': str(e),
             }, status=500)
     
-    # Default: Squad
+    # Squad: Initiate Payment (https://docs.squadco.com/Payments/Initiate-payment)
+    # POST /transaction/initiate → returns checkout_url for payment modal
     registration.squad_reference = reference
     registration.save()
-    
     url = f"{settings.SQUAD_BASE_URL}/transaction/initiate"
     auth_key = settings.SQUAD_SECRET_KEY.strip()
     if not auth_key:
