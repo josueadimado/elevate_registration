@@ -264,9 +264,11 @@ def initialize_payment(request):
     
     registration.save()
     
-    # Get payment option and gateway from form data
-    payment_option = request.POST.get('payment_option', 'partial')
-    payment_gateway = request.POST.get('payment_gateway', 'squad').lower()
+    # Get payment option and gateway from form data (all payments in USD)
+    body = _parse_body_json(request)
+    payment_option = (body.get('payment_option') or request.POST.get('payment_option') or 'partial').lower()
+    payment_option = 'full' if payment_option == 'full' else 'partial'
+    payment_gateway = (body.get('payment_gateway') or request.POST.get('payment_gateway') or 'squad').lower()
     
     # Determine payment amount and reference based on option (unique ref per attempt to avoid Duplicate Transaction Reference)
     if payment_option == 'full':
@@ -279,8 +281,7 @@ def initialize_payment(request):
         payment_type = 'registration_fee'
     
     exchange_rate = get_usd_to_ngn_rate()
-    amount_in_ngn = payment_amount * exchange_rate
-    amount_in_kobo = int(amount_in_ngn * 100)
+    amount_subunit = int(round(payment_amount * 100))  # USD cents (all payments in USD)
     callback_url = request.build_absolute_uri(f'/success/?reference={reference}')
     metadata = {
         'student_name': registration.full_name,
@@ -308,10 +309,11 @@ def initialize_payment(request):
             }
             payload = {
                 'email': registration.email,
-                'amount': amount_in_kobo,
+                'amount': amount_subunit,
                 'reference': reference,
                 'callback_url': callback_url,
                 'metadata': metadata,
+                'currency': 'USD',
             }
             response = requests.post(url, headers=headers, json=payload)
             data = response.json()
@@ -331,8 +333,7 @@ def initialize_payment(request):
                 'message': str(e),
             }, status=500)
     
-    # Squad: Initiate Payment (https://docs.squadco.com/Payments/Initiate-payment)
-    # POST /transaction/initiate → returns checkout_url for payment modal
+    # Squad: Initiate Payment — all in USD
     registration.squad_reference = reference
     registration.save()
     url = f"{settings.SQUAD_BASE_URL}/transaction/initiate"
@@ -350,8 +351,8 @@ def initialize_payment(request):
     }
     payload = {
         'email': registration.email,
-        'amount': str(amount_in_kobo),
-        'currency': 'NGN',
+        'amount': str(amount_subunit),
+        'currency': 'USD',
         'initiate_type': 'inline',
         'transaction_ref': reference,
         'customer_name': registration.full_name,
@@ -446,8 +447,7 @@ def pay_registration_fee(request, registration_id):
         payment_type = 'registration_fee'
     
     exchange_rate = get_usd_to_ngn_rate()
-    amount_in_ngn = payment_amount * exchange_rate
-    amount_in_kobo = int(amount_in_ngn * 100)
+    amount_subunit = int(round(payment_amount * 100))  # USD cents (all payments in USD)
     callback_url = request.build_absolute_uri(f'/success/?reference={reference}')
     metadata = {
         'student_name': registration.full_name,
@@ -475,10 +475,11 @@ def pay_registration_fee(request, registration_id):
             }
             payload = {
                 'email': registration.email,
-                'amount': amount_in_kobo,
+                'amount': amount_subunit,
                 'reference': reference,
                 'callback_url': callback_url,
                 'metadata': metadata,
+                'currency': 'USD',
             }
             response = requests.post(url, headers=headers, json=payload)
             data = response.json()
@@ -498,7 +499,7 @@ def pay_registration_fee(request, registration_id):
                 'message': str(e),
             }, status=500)
     
-    # Squad
+    # Squad — all in USD
     url = f"{settings.SQUAD_BASE_URL}/transaction/initiate"
     auth_key = settings.SQUAD_SECRET_KEY.strip()
     if not auth_key:
@@ -514,8 +515,8 @@ def pay_registration_fee(request, registration_id):
     }
     payload = {
         'email': registration.email,
-        'amount': str(amount_in_kobo),
-        'currency': 'NGN',
+        'amount': str(amount_subunit),
+        'currency': 'USD',
         'initiate_type': 'inline',
         'transaction_ref': reference,
         'customer_name': registration.full_name,
@@ -577,11 +578,11 @@ def pay_course_fee(request, registration_id):
     if not registration.registration_fee_paid:
         return JsonResponse({'error': 'Registration fee must be paid first'}, status=400)
     
+    body = _parse_body_json(request)
     reference = _unique_ref("ASPIR-COURSE-", str(registration.id))
     exchange_rate = get_usd_to_ngn_rate()
     course_fee_amount = float(registration.course_fee_amount or registration.get_course_fee())
-    amount_in_ngn = course_fee_amount * exchange_rate
-    amount_in_kobo = int(amount_in_ngn * 100)
+    amount_subunit = int(round(course_fee_amount * 100))  # USD cents (all payments in USD)
     callback_url = request.build_absolute_uri(f'/success/?reference={reference}')
     metadata = {
         'student_name': registration.full_name,
@@ -609,10 +610,11 @@ def pay_course_fee(request, registration_id):
             }
             payload = {
                 'email': registration.email,
-                'amount': amount_in_kobo,
+                'amount': amount_subunit,
                 'reference': reference,
                 'callback_url': callback_url,
                 'metadata': metadata,
+                'currency': 'USD',
             }
             response = requests.post(url, headers=headers, json=payload)
             data = response.json()
@@ -632,7 +634,7 @@ def pay_course_fee(request, registration_id):
                 'message': str(e),
             }, status=500)
     
-    # Squad
+    # Squad — all in USD
     url = f"{settings.SQUAD_BASE_URL}/transaction/initiate"
     auth_key = settings.SQUAD_SECRET_KEY.strip()
     if not auth_key:
@@ -648,8 +650,8 @@ def pay_course_fee(request, registration_id):
     }
     payload = {
         'email': registration.email,
-        'amount': str(amount_in_kobo),
-        'currency': 'NGN',
+        'amount': str(amount_subunit),
+        'currency': 'USD',
         'initiate_type': 'inline',
         'transaction_ref': reference,
         'customer_name': registration.full_name,
