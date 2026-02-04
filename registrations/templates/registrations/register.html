@@ -48,7 +48,7 @@
         Register for ASPIR
       </h1>
       <p class="hero-subtitle" style="font-size: 18px; color: #86868b; max-width: 680px; margin: 0 auto 16px; line-height: 1.5; font-weight: 400; padding: 0 16px;">
-        Complete your registration below. Your information is secure. After submitting, you can pay with Squad or Paystack.
+        Complete your registration below. Your information is secure. After submitting, you can pay with Squad.
       </p>
       <div style="max-width: 560px; margin: 0 auto 24px; padding: 12px 18px; background: rgba(0, 113, 227, 0.08); border: 1px solid rgba(0, 113, 227, 0.2); border-radius: 12px; font-size: 14px; color: #374151; line-height: 1.5;">
         <strong style="color: #1d1d1f;">All payments are in US Dollars (USD).</strong> Your bank may convert to your local currency. Cards from any country are accepted.
@@ -301,7 +301,7 @@
                     <input type="radio" name="payment_option" id="payment-option-partial" value="partial" checked style="width: 18px; height: 18px; accent-color: #8b5cf6; cursor: pointer; flex-shrink: 0;">
                     <div style="flex: 1; min-width: 0;">
                       <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 14px;">Pay Registration Fee Now</div>
-                      <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Pay $<span id="partial-reg-fee">{{ pricing_config.registration_fee|floatformat:2 }}</span> (≈ ₦<span id="partial-reg-fee-ngn">{{ current_reg_fee_ngn|floatformat:0 }}</span>) now, pay course fee later</div>
+                      <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Pay $<span id="partial-reg-fee">{{ pricing_config.registration_fee|floatformat:2 }}</span> now, pay course fee later</div>
                     </div>
                     <iconify-icon icon="lucide:calendar" style="font-size: 20px; color: #8b5cf6; flex-shrink: 0;"></iconify-icon>
                   </label>
@@ -310,33 +310,22 @@
                     <input type="radio" name="payment_option" id="payment-option-full" value="full" style="width: 18px; height: 18px; accent-color: #34c759; cursor: pointer; flex-shrink: 0;">
                     <div style="flex: 1; min-width: 0;">
                       <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 14px;">Pay Full Amount Now</div>
-                      <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Pay $<span id="full-total-fee">{{ pricing_config.total_amount|floatformat:2 }}</span> (≈ ₦<span id="full-total-fee-ngn">{{ current_total_ngn|floatformat:0 }}</span>) now and complete enrollment</div>
+                      <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Pay $<span id="full-total-fee">{{ pricing_config.total_amount|floatformat:2 }}</span> now and complete enrollment</div>
                     </div>
                     <iconify-icon icon="lucide:check-circle-2" style="font-size: 20px; color: #34c759; flex-shrink: 0;"></iconify-icon>
                   </label>
                 </div>
               </div>
               
-              <!-- Payment Platform Choice -->
+              <!-- Payment via Squad -->
               <div class="payment-platform-options" style="background: rgba(0, 113, 227, 0.05); border: 2px solid rgba(0, 113, 227, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                <label style="display: block; font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 12px;">Payment platform:</label>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                  <label class="gateway-option-label" style="display: flex; align-items: center; gap: 10px; padding: 14px; background: white; border: 2px solid #0071e3; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;" id="gateway-squad-label">
-                    <input type="radio" name="payment_gateway" id="gateway-squad" value="squad" checked style="width: 18px; height: 18px; accent-color: #0071e3; cursor: pointer; flex-shrink: 0;">
-                    <div style="flex: 1; min-width: 0;">
-                      <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 14px;">Squad</div>
-                      <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Card, Bank, USSD, Transfer</div>
-                    </div>
-                    <iconify-icon icon="lucide:credit-card" style="font-size: 20px; color: #0071e3; flex-shrink: 0;"></iconify-icon>
-                  </label>
-                  <label class="gateway-option-label" style="display: flex; align-items: center; gap: 10px; padding: 14px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;" id="gateway-paystack-label">
-                    <input type="radio" name="payment_gateway" id="gateway-paystack" value="paystack" style="width: 18px; height: 18px; accent-color: #00c3f7; cursor: pointer; flex-shrink: 0;">
-                    <div style="flex: 1; min-width: 0;">
-                      <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 14px;">Paystack</div>
-                      <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Card, Bank, USSD, Transfer (alternative)</div>
-                    </div>
-                    <iconify-icon icon="lucide:wallet" style="font-size: 20px; color: #00c3f7; flex-shrink: 0;"></iconify-icon>
-                  </label>
+                <div style="display: flex; align-items: center; gap: 10px; padding: 14px; background: white; border: 2px solid #0071e3; border-radius: 12px;">
+                  <input type="hidden" name="payment_gateway" value="squad">
+                  <iconify-icon icon="lucide:credit-card" style="font-size: 20px; color: #0071e3; flex-shrink: 0;"></iconify-icon>
+                  <div>
+                    <div style="font-weight: 600; color: #1e293b; font-size: 14px;">Payment via Squad</div>
+                    <div style="font-size: 12px; color: #64748b; line-height: 1.4;">Card, Bank, USSD, Transfer</div>
+                  </div>
                 </div>
                 <p style="font-size: 13px; color: #64748b; margin: 12px 0 0 0; padding: 10px 12px; background: rgba(0, 113, 227, 0.06); border-radius: 8px; line-height: 1.5;">
                   <strong style="color: #1d1d1f;">Paying from outside Nigeria?</strong> Use a card that allows international transactions. If your card is declined, try another card or <a href="mailto:info@elevatetribeanalytics.com" style="color: #0071e3;">contact us</a> for help.
@@ -351,18 +340,12 @@
                     <div id="total-amount" style="font-size: 32px; font-weight: 800; color: #ff6b35; line-height: 1.2;">
                       $<span id="amount-display">{{ pricing_config.registration_fee|floatformat:2 }}</span>
                     </div>
-                    <div id="ngn-amount-display" style="font-size: 13px; color: #64748b; margin-top: 4px; font-weight: 500;">
-                      ≈ ₦<span id="ngn-amount">{{ current_reg_fee_ngn|floatformat:0 }}</span>
-                    </div>
                   </div>
                 </div>
                 <div style="background: rgba(0, 113, 227, 0.08); border: 1px solid rgba(0, 113, 227, 0.15); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
-                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                    <iconify-icon icon="lucide:globe" style="font-size: 16px; color: #0071e3;"></iconify-icon>
-                    <span style="font-size: 13px; font-weight: 600; color: #1d1d1f;">Payment Currency:</span>
-                  </div>
                   <p style="font-size: 12px; color: #64748b; margin: 0; line-height: 1.5;">
-                    Payment will be processed in <strong style="color: #0071e3;">Nigerian Naira (₦)</strong>. The amount shown above is converted using today's exchange rate (1 USD = ₦<span id="exchange-rate-display">{{ exchange_rate|floatformat:2 }}</span>). Your bank or payment provider will convert from your local currency automatically at the time of payment. The final amount may vary slightly based on your bank's conversion rate.
+                    <iconify-icon icon="lucide:globe" style="font-size: 14px; vertical-align: middle; color: #0071e3;"></iconify-icon>
+                    <strong style="color: #1d1d1f;">Payment in USD.</strong> All amounts are in US Dollars. Your bank will convert from your local currency at the time of payment.
                   </p>
                 </div>
                 <p id="payment-info-text" style="font-size: 13px; color: #64748b; margin: 0; line-height: 1.5;">
@@ -375,37 +358,15 @@
               <div style="background: rgba(139, 92, 246, 0.05); border-radius: 12px; padding: 16px;">
                 <div style="display: flex; justify-content: space-between; font-size: 14px; color: #64748b; margin-bottom: 8px;">
                   <span>Registration Fee:</span>
-                  <div style="text-align: right;">
-                    <strong id="registration-fee-amount" style="color: #ff6b35;">${{ pricing_config.registration_fee|floatformat:2 }}</strong>
-                    <div style="font-size: 12px; color: #86868b;">≈ ₦<span id="registration-fee-ngn">{{ current_reg_fee_ngn|floatformat:0 }}</span></div>
-                  </div>
+                  <div style="text-align: right;"><strong id="registration-fee-amount" style="color: #ff6b35;">${{ pricing_config.registration_fee|floatformat:2 }}</strong></div>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 14px; color: #64748b; margin-bottom: 8px;">
                   <span>Course Fee:</span>
-                  <div style="text-align: right;">
-                    <strong id="course-fee-amount" style="color: #64748b;">${{ pricing_config.course_fee|floatformat:2 }}</strong>
-                    <div style="font-size: 12px; color: #86868b;">≈ ₦<span id="course-fee-ngn">{{ current_course_fee_ngn|floatformat:0 }}</span></div>
-                  </div>
+                  <div style="text-align: right;"><strong id="course-fee-amount" style="color: #64748b;">${{ pricing_config.course_fee|floatformat:2 }}</strong></div>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 600; color: #1e293b; padding-top: 12px; border-top: 1px solid rgba(139, 92, 246, 0.1); margin-top: 8px;">
                   <span>Total Program Fee:</span>
-                  <div style="text-align: right;">
-                    <strong>${{ pricing_config.total_amount|floatformat:2 }}</strong>
-                    <div style="font-size: 13px; color: #86868b; font-weight: 500;">≈ ₦<span id="total-fee-ngn">{{ current_total_ngn|floatformat:0 }}</span></div>
-                  </div>
-                </div>
-                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(139, 92, 246, 0.1);">
-                  <div style="display: flex; align-items: flex-start; gap: 8px;">
-                    <iconify-icon icon="lucide:info" style="font-size: 14px; color: #0071e3; flex-shrink: 0; margin-top: 2px;"></iconify-icon>
-                    <div>
-                      <p style="font-size: 11px; color: #86868b; margin: 0 0 4px 0; line-height: 1.4;">
-                        <strong style="color: #1d1d1f;">Exchange Rate:</strong> 1 USD = ₦<span id="exchange-rate-breakdown">{{ exchange_rate|floatformat:2 }}</span> (updated daily)
-                      </p>
-                      <p style="font-size: 11px; color: #86868b; margin: 0; line-height: 1.4;">
-                        <strong style="color: #1d1d1f;">Note:</strong> The NGN amounts shown are estimates. Your bank will use their own exchange rate at the time of payment, which may result in a slightly different amount in your local currency.
-                      </p>
-                    </div>
-                  </div>
+                  <div style="text-align: right;"><strong>${{ pricing_config.total_amount|floatformat:2 }}</strong></div>
                 </div>
               </div>
               {% endif %}
@@ -1548,23 +1509,6 @@
       }
     };
     
-    // Pricing data in NGN
-    const pricingNGN = {
-      NEW: {
-        total: {{ pricing_ngn.NEW.total|default:"225000" }},
-        registration_fee: {{ pricing_ngn.NEW.registration_fee|default:"75000" }},
-        course_fee: {{ pricing_ngn.NEW.course_fee|default:"150000" }}
-      },
-      RETURNING: {
-        total: {{ pricing_ngn.RETURNING.total|default:"180000" }},
-        registration_fee: {{ pricing_ngn.RETURNING.registration_fee|default:"30000" }},
-        course_fee: {{ pricing_ngn.RETURNING.course_fee|default:"150000" }}
-      }
-    };
-    
-    // Exchange rate
-    const exchangeRate = {{ exchange_rate|default:"1500.00" }};
-
     // Guardian fields are now always required for all registrations
     // Ensure required attributes are set
     if (guardianSection) {
@@ -1598,7 +1542,6 @@
       const paymentOption = document.querySelector('input[name="payment_option"]:checked')?.value || 'partial';
       
       const amountDisplay = document.getElementById('amount-display');
-      const ngnAmountDisplay = document.getElementById('ngn-amount');
       const paymentInfoText = document.getElementById('payment-info-text');
       const paymentAmountDisplay = document.getElementById('payment-amount-display');
       const partialLabel = document.getElementById('payment-option-partial-label');
@@ -1607,15 +1550,11 @@
       // Get current pricing based on enrollment type
       const enrollmentType = enrollmentTypeInput?.value || 'NEW';
       const currentPricing = pricing[enrollmentType] || pricing.NEW;
-      const currentPricingNGN = pricingNGN[enrollmentType] || pricingNGN.NEW;
       
       if (paymentOption === 'full') {
         // Full payment
         if (amountDisplay) {
           amountDisplay.textContent = Number(currentPricing.total).toFixed(2);
-        }
-        if (ngnAmountDisplay) {
-          ngnAmountDisplay.textContent = Number(currentPricingNGN.total).toLocaleString('en-US');
         }
         if (paymentInfoText) {
           paymentInfoText.innerHTML = '<iconify-icon icon="lucide:check-circle-2" style="font-size: 14px; vertical-align: middle; color: #34c759;"></iconify-icon> Pay everything now and complete your enrollment immediately.';
@@ -1640,9 +1579,6 @@
         // Partial payment (registration fee only)
         if (amountDisplay) {
           amountDisplay.textContent = Number(currentPricing.registration_fee).toFixed(2);
-        }
-        if (ngnAmountDisplay) {
-          ngnAmountDisplay.textContent = Number(currentPricingNGN.registration_fee).toLocaleString('en-US');
         }
         if (paymentInfoText) {
           paymentInfoText.innerHTML = '<iconify-icon icon="lucide:info" style="font-size: 14px; vertical-align: middle;"></iconify-icon> You\'ll pay the course fee later to complete your enrollment.';
@@ -1672,10 +1608,6 @@
         return;
       }
       
-      // Get enrollment type for NGN pricing
-      const enrollmentType = enrollmentTypeInput?.value || 'NEW';
-      const currentPricingNGN = pricingNGN[enrollmentType] || pricingNGN.NEW;
-      
       if (registrationFeeEl) {
         registrationFeeEl.textContent = '$' + Number(pricingData.registration_fee).toFixed(2);
       }
@@ -1683,41 +1615,15 @@
         courseFeeEl.textContent = '$' + Number(pricingData.course_fee).toFixed(2);
       }
       
-      // Update NGN amounts
-      const registrationFeeNGN = document.getElementById('registration-fee-ngn');
-      const courseFeeNGN = document.getElementById('course-fee-ngn');
-      const totalFeeNGN = document.getElementById('total-fee-ngn');
-      
-      if (registrationFeeNGN) {
-        registrationFeeNGN.textContent = Number(currentPricingNGN.registration_fee).toLocaleString('en-US');
-      }
-      if (courseFeeNGN) {
-        courseFeeNGN.textContent = Number(currentPricingNGN.course_fee).toLocaleString('en-US');
-      }
-      if (totalFeeNGN) {
-        totalFeeNGN.textContent = Number(currentPricingNGN.total).toLocaleString('en-US');
-      }
-      
-      // Update payment option displays
       const partialRegFee = document.getElementById('partial-reg-fee');
-      const partialRegFeeNGN = document.getElementById('partial-reg-fee-ngn');
       const fullTotalFee = document.getElementById('full-total-fee');
-      const fullTotalFeeNGN = document.getElementById('full-total-fee-ngn');
-      
       if (partialRegFee) {
         partialRegFee.textContent = Number(pricingData.registration_fee).toFixed(2);
-      }
-      if (partialRegFeeNGN) {
-        partialRegFeeNGN.textContent = Number(currentPricingNGN.registration_fee).toLocaleString('en-US');
       }
       if (fullTotalFee) {
         fullTotalFee.textContent = Number(pricingData.total).toFixed(2);
       }
-      if (fullTotalFeeNGN) {
-        fullTotalFeeNGN.textContent = Number(currentPricingNGN.total).toLocaleString('en-US');
-      }
       
-      // Refresh payment display
       updatePaymentDisplay();
     }
 

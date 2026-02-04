@@ -101,7 +101,7 @@
             
             <div class="info-box">
                 <h3 style="color: #1d1d1f; font-size: 18px; margin-top: 0; margin-bottom: 16px;">Payment Received</h3>
-                <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Course Fee:</strong> <span style="color: #34c759; font-weight: 600;">${{ registration.course_fee_amount|default:registration.get_course_fee|floatformat:2 }}</span> (≈ ₦{{ course_fee_ngn|floatformat:0 }})</p>
+                <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Course Fee:</strong> <span style="color: #34c759; font-weight: 600;">${{ registration.course_fee_amount|default:registration.get_course_fee|floatformat:2 }}</span></p>
                 <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Reference:</strong> {{ registration.squad_reference|default:registration.paystack_reference }}</p>
             </div>
             
@@ -133,10 +133,6 @@
                     <li style="margin-bottom: 8px;">Our team will reach out with onboarding information</li>
                 </ul>
             </div>
-            
-            <p style="color: #64748b; font-size: 14px; margin-top: 32px;">
-                <strong style="color: #1d1d1f;">Payment Currency Note:</strong> Your payment was processed in Nigerian Naira (₦). The USD amounts shown are for reference. Exchange rate: 1 USD = ₦{{ exchange_rate|floatformat:2 }}.
-            </p>
             
             <p style="color: #64748b; font-size: 14px; margin-top: 24px;">
                 If you have any questions, please contact us at <a href="mailto:{{ support_email }}" style="color: #0071e3;">{{ support_email }}</a> or call (+233) 20 956 9399.
