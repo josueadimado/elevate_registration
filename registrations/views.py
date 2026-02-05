@@ -606,45 +606,33 @@ def verify_payment(request):
     
     try:
         registration = _registration_from_ref(reference)
-        # Verify with Squad API
-        url = f"{settings.SQUAD_BASE_URL}/transaction"
-        
-        # Format authorization header - Squad requires Bearer token
+        # Verify with Squad API: GET /transaction/verify/{transaction_ref}
+        base_url = (getattr(settings, 'SQUAD_BASE_URL') or '').rstrip('/')
+        url = f"{base_url}/transaction/verify/{reference}"
         auth_key = settings.SQUAD_SECRET_KEY.strip()
         if not auth_key.startswith('Bearer '):
             auth_key = f'Bearer {auth_key}'
-        
         headers = {
             'Authorization': auth_key,
             'Content-Type': 'application/json',
         }
-        
-        params = {
-            'reference': reference,
-            'currency': 'USD',
-        }
-        
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers)
         data = response.json()
-        
         if data.get('status') == 200 and data.get('success'):
-            transactions = data.get('data', [])
-            if transactions:
-                transaction = transactions[0]
-                if transaction.get('transaction_status', '').lower() == 'success':
-                    registration.status = 'PAID'
-                    registration.save()
-                    return JsonResponse({
-                        'status': 'success',
-                        'message': 'Payment verified successfully',
-                        'registration': {
-                            'name': registration.full_name,
-                            'cohort': registration.cohort.name if registration.cohort else 'N/A',
-                            'group': registration.get_group_display(),
-                            'dimension': registration.dimension.name if registration.dimension else 'N/A',
-                        }
-                    })
-        
+            txn = data.get('data')
+            if txn and (txn.get('transaction_status') or '').lower() == 'success':
+                registration.status = 'PAID'
+                registration.save()
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Payment verified successfully',
+                    'registration': {
+                        'name': registration.full_name,
+                        'cohort': registration.cohort.name if registration.cohort else 'N/A',
+                        'group': registration.get_group_display(),
+                        'dimension': registration.dimension.name if registration.dimension else 'N/A',
+                    }
+                })
         return JsonResponse({
             'status': 'failed',
             'message': 'Payment verification failed',

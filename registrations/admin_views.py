@@ -334,35 +334,34 @@ def admin_reconcile_payment(request):
             )
             return redirect('view_registration', registration_id=registration.id)
         
-        # Verify with Squad API
-        url = f"{django_settings.SQUAD_BASE_URL}/transaction"
+        # Verify with Squad API: GET /transaction/verify/{transaction_ref}
+        base_url = (getattr(django_settings, 'SQUAD_BASE_URL') or '').rstrip('/')
+        url = f"{base_url}/transaction/verify/{reference}"
         auth_key = (getattr(django_settings, 'SQUAD_SECRET_KEY') or '').strip()
         if not auth_key.startswith('Bearer '):
             auth_key = f'Bearer {auth_key}'
         headers = {'Authorization': auth_key, 'Content-Type': 'application/json'}
-        params = {'reference': reference, 'currency': 'USD'}
         
         try:
-            response = requests.get(url, headers=headers, params=params, timeout=15)
+            response = requests.get(url, headers=headers, timeout=15)
             data = response.json()
         except Exception as e:
             messages.error(request, f'Could not reach Squad API: {e}')
             return redirect('admin_reconcile_payment')
         
-        if not (data.get('status') == 200 and data.get('success')):
+        if response.status_code == 400 or not (data.get('status') == 200 and data.get('success')):
+            msg = data.get('message') or data.get('error') or f'Status {data.get("status", response.status_code)}'
             messages.error(
                 request,
-                f'Squad returned an error. Check the reference or try again. (status={data.get("status")})'
+                f'Squad returned an error: {msg}. Check that the reference is correct and exists in Squad (live vs sandbox).'
             )
             return redirect('admin_reconcile_payment')
         
-        raw_data = data.get('data', [])
-        transactions = raw_data if isinstance(raw_data, list) else [raw_data] if raw_data else []
-        if not transactions:
-            messages.error(request, 'Squad did not return any transaction for this reference.')
+        txn = data.get('data')
+        if not txn:
+            messages.error(request, 'Squad did not return transaction data for this reference.')
             return redirect('admin_reconcile_payment')
         
-        txn = transactions[0]
         if (txn.get('transaction_status') or '').lower() != 'success':
             messages.error(request, f'Payment was not successful on Squad (status: {txn.get("transaction_status")}).')
             return redirect('admin_reconcile_payment')
@@ -377,9 +376,9 @@ def admin_reconcile_payment(request):
         else:
             payment_type = (txn.get('meta') or {}).get('payment_type') or 'registration_fee'
         
-        # Amount: Squad usually returns in smallest unit (cents for USD)
-        amount_subunit = float(txn.get('amount', 0))
-        currency = (txn.get('currency') or 'USD').upper()
+        # Amount: Squad verify returns transaction_amount (in smallest unit: cents for USD, kobo for NGN)
+        amount_subunit = float(txn.get('transaction_amount', 0))
+        currency = (txn.get('transaction_currency_id') or txn.get('currency') or 'USD').upper()
         if currency == 'USD':
             amount_in_usd = amount_subunit / 100
         else:
