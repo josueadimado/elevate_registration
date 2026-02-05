@@ -20,6 +20,7 @@ from .emails import (
     send_registration_confirmation_email,
     send_payment_complete_email,
     send_course_fee_payment_email,
+    send_staff_payment_notification_email,
 )
 from .admin_forms import (
     AdminEditRegistrationForm, AdminEditCohortForm,
@@ -429,7 +430,7 @@ def admin_reconcile_payment(request):
             gateway='squad',
             message='Reconciled from admin',
         )
-        # Send appropriate email
+        # Send appropriate email to the participant
         try:
             if payment_type == 'full_payment' or reference.startswith('ASPIR-FULL-'):
                 send_payment_complete_email(registration)
@@ -440,6 +441,13 @@ def admin_reconcile_payment(request):
                     send_payment_complete_email(registration)
                 else:
                     send_course_fee_payment_email(registration)
+        except Exception:
+            pass
+        # Notify staff (elevatetribeanalytics9, amosbenita7) – full vs partial
+        try:
+            send_staff_payment_notification_email(
+                registration, payment_type, amount_in_usd, reference=reference
+            )
         except Exception:
             pass
         messages.success(

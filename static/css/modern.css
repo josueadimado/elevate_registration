@@ -8,6 +8,16 @@
   position: relative;
   overflow: hidden;
 }
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 60px 0;
+  }
+}
+@media (max-width: 480px) {
+  .hero-section {
+    padding: 40px 0;
+  }
+}
 
 .hero-section::before {
   content: '';
@@ -72,7 +82,7 @@
 }
 
 .hero-title {
-  font-size: 64px;
+  font-size: clamp(28px, 6vw, 64px);
   font-weight: 900;
   line-height: 1.1;
   margin-bottom: 24px;

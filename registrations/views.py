@@ -13,12 +13,20 @@ from .models import (
     Registration, Cohort, Dimension, PricingConfig, ProgramSettings, PaymentActivity
 )
 from .utils import get_usd_to_ngn_rate
-from .emails import send_registration_confirmation_email, send_payment_complete_email, send_course_fee_payment_email
+from .emails import (
+    send_registration_confirmation_email,
+    send_payment_complete_email,
+    send_course_fee_payment_email,
+    send_staff_payment_notification_email,
+)
+import logging
 import requests
 import json
 import hmac
 import hashlib
 import time
+
+logger = logging.getLogger(__name__)
 
 
 def _unique_ref(prefix, registration_id):
@@ -762,6 +770,13 @@ def squad_webhook(request):
                     _log_payment_activity(
                         registration, transaction_ref, 'success', payment_type, amount_in_usd
                     )
+                    # Notify staff (elevatetribeanalytics9, amosbenita7) – full vs partial
+                    try:
+                        send_staff_payment_notification_email(
+                            registration, payment_type, amount_in_usd, reference=transaction_ref
+                        )
+                    except Exception as staff_email_err:
+                        logger.error(f"Staff payment notification failed: {staff_email_err}")
                     return HttpResponse('Webhook processed successfully', status=200)
                 else:
                     registration.status = 'FAILED'

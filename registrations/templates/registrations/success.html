@@ -80,29 +80,29 @@
         {% endif %}
 
         {% if registration %}
-        <div class="card" style="text-align: left; margin-bottom: 32px;">
+        <div class="card success-summary-card" style="text-align: left; margin-bottom: 32px;">
           <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid hsl(var(--border));">
             Registration Summary
           </h3>
           
-          <div style="display: flex; flex-direction: column; gap: 16px;">
-            <div style="display: flex; justify-content: space-between;">
+          <div class="success-summary-rows" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="success-summary-row" style="display: flex; justify-content: space-between;">
               <span style="color: hsl(var(--muted-foreground));">Name:</span>
               <span style="font-weight: 600;">{{ registration.full_name }}</span>
             </div>
-            <div style="display: flex; justify-content: space-between;">
+            <div class="success-summary-row" style="display: flex; justify-content: space-between;">
               <span style="color: hsl(var(--muted-foreground));">Email:</span>
               <span style="font-weight: 600;">{{ registration.email }}</span>
             </div>
-            <div style="display: flex; justify-content: space-between;">
+            <div class="success-summary-row" style="display: flex; justify-content: space-between;">
               <span style="color: hsl(var(--muted-foreground));">Cohort:</span>
               <span style="font-weight: 600;">{% if registration.cohort %}{{ registration.cohort.name }}{% else %}{{ registration.get_cohort_display }}{% endif %}</span>
             </div>
-            <div style="display: flex; justify-content: space-between;">
+            <div class="success-summary-row" style="display: flex; justify-content: space-between;">
               <span style="color: hsl(var(--muted-foreground));">Group:</span>
               <span style="font-weight: 600;">{{ registration.get_group_display }}</span>
             </div>
-            <div style="display: flex; justify-content: space-between;">
+            <div class="success-summary-row" style="display: flex; justify-content: space-between;">
               <span style="color: hsl(var(--muted-foreground));">Dimension:</span>
               <span style="font-weight: 600;">{% if registration.dimension %}{{ registration.dimension.name }}{% else %}{{ registration.get_dimension_display }}{% endif %}</span>
             </div>

@@ -1,0 +1,218 @@
+/**
+ * Global responsive styles for ASPIR registration pages.
+ * Ensures consistent behavior on mobile, tablet, and desktop.
+ */
+
+/* Prevent horizontal overflow */
+html {
+  overflow-x: hidden;
+}
+body,
+.export-wrapper {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Container: comfortable padding on small screens */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+@media (max-width: 480px) {
+  .container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* Nav: wrap and shrink on small screens (all navs using .container) */
+@media (max-width: 768px) {
+  nav .container {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  nav a.btn,
+  nav .btn-outline,
+  nav .back-home-btn,
+  nav a[href*="admin"] {
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    min-height: 40px !important;
+    height: auto !important;
+  }
+  /* Optional: hide icon text on very small to save space */
+  .check-status-text,
+  .back-home-text,
+  .admin-login-text {
+    display: none !important;
+  }
+  nav .container > div:last-child {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+@media (max-width: 480px) {
+  nav {
+    padding: 12px 0 !important;
+  }
+  nav .container {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  nav .container > div:last-child {
+    justify-content: stretch;
+  }
+  nav a.btn,
+  nav .btn-outline,
+  nav .back-home-btn {
+    justify-content: center;
+  }
+}
+
+/* Hero sections: reduce padding and font size */
+@media (max-width: 768px) {
+  .hero-section,
+  .hero {
+    padding-top: 48px !important;
+    padding-bottom: 40px !important;
+  }
+  .hero-title,
+  .hero h1,
+  h1.hero-title {
+    font-size: 32px !important;
+    line-height: 1.2 !important;
+  }
+  .hero-subtitle,
+  .hero p {
+    font-size: 16px !important;
+  }
+}
+@media (max-width: 480px) {
+  .hero-section,
+  .hero {
+    padding-top: 32px !important;
+    padding-bottom: 28px !important;
+  }
+  .hero-title,
+  .hero h1,
+  h1.hero-title {
+    font-size: 26px !important;
+  }
+  .hero-subtitle,
+  .hero p {
+    font-size: 15px !important;
+  }
+}
+
+/* Section padding */
+@media (max-width: 768px) {
+  .section {
+    padding: 48px 0 !important;
+  }
+}
+@media (max-width: 480px) {
+  .section {
+    padding: 32px 0 !important;
+  }
+}
+
+/* Form cards and wrappers */
+@media (max-width: 768px) {
+  .registration-form-card,
+  .form-section-wrapper .registration-form-card {
+    padding: 24px !important;
+  }
+}
+@media (max-width: 480px) {
+  .registration-form-card,
+  .form-section-wrapper .registration-form-card {
+    padding: 20px 16px !important;
+    border-radius: 16px !important;
+  }
+}
+
+/* Buttons: full width on very small when in narrow context */
+@media (max-width: 480px) {
+  .hero-actions,
+  .hero .container > div[style*="flex"]:has(.btn),
+  .section .container .btn {
+    flex-direction: column;
+  }
+  .hero-actions .btn,
+  .hero .container a.btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Success page: summary card and payment buttons */
+@media (max-width: 640px) {
+  .success-summary-card,
+  .card[style*="text-align: left"] {
+    padding: 20px !important;
+  }
+  .success-summary-row,
+  .card div[style*="display: flex"][style*="justify-content: space-between"] {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}
+@media (max-width: 480px) {
+  .section[style*="padding-top: 100px"] {
+    padding-top: 48px !important;
+    padding-bottom: 48px !important;
+  }
+  .section[style*="min-height: 70vh"] {
+    min-height: auto;
+  }
+}
+
+/* Check status & register: form inputs and info boxes */
+@media (max-width: 640px) {
+  input[style*="height: 54px"],
+  input[style*="height: 52px"] {
+    height: 48px !important;
+    font-size: 16px !important; /* avoids iOS zoom on focus */
+  }
+  .form-section-wrapper .container > div {
+    max-width: 100% !important;
+  }
+}
+
+/* Images: always fluid */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Grid overrides for any 2-column layout that might slip through */
+@media (max-width: 768px) {
+  .feature-cards-grid,
+  div[style*="grid-template-columns: 1fr 1fr"],
+  div[style*="grid-template-columns: repeat(2, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Fees section 2-column grid */
+@media (max-width: 768px) {
+  #fees div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+}
+
+/* Touch targets: minimum 44px for interactive elements */
+@media (pointer: coarse) {
+  a.btn,
+  button.btn,
+  .btn,
+  nav a,
+  .action-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

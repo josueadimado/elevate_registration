@@ -163,3 +163,54 @@ def send_course_fee_payment_email(registration):
         
     except Exception as e:
         logger.error(f"Failed to send course fee payment email: {str(e)}")
+
+
+# Staff addresses to notify when any payment goes through (full or partial)
+STAFF_PAYMENT_NOTIFICATION_EMAILS = [
+    'elevatetribeanalytics9@gmail.com',
+    'amosbenita7@gmail.com',
+]
+
+
+def send_staff_payment_notification_email(registration, payment_type, amount_paid_usd, reference=''):
+    """
+    Notify staff (elevatetribeanalytics9@gmail.com, amosbenita7@gmail.com) when a
+    payment goes through, so they know who paid and whether it was full or partial.
+    """
+    recipient_list = getattr(
+        settings, 'STAFF_PAYMENT_NOTIFICATION_EMAILS', STAFF_PAYMENT_NOTIFICATION_EMAILS
+    )
+    if not recipient_list:
+        return
+    try:
+        is_full = registration.is_fully_paid()
+        payment_type_display = {
+            'full_payment': 'Full payment (registration + course fee)',
+            'registration_fee': 'Registration fee only',
+            'course_fee': 'Course fee only',
+        }.get(payment_type, payment_type.replace('_', ' ').title())
+        remaining = float(registration.get_remaining_balance()) if not is_full else 0
+
+        context = {
+            'registration': registration,
+            'is_full_payment': is_full,
+            'payment_type_display': payment_type_display,
+            'amount_paid_usd': f'{float(amount_paid_usd):.2f}',
+            'remaining_balance': f'{remaining:.2f}',
+            'reference': reference or getattr(registration, '_last_transaction_ref', ''),
+        }
+        subject = f'ASPIR: Payment received – {"Full" if is_full else "Partial"} – {registration.full_name}'
+        html_message = render_to_string('registrations/emails/staff_payment_notification.html', context)
+        plain_message = strip_tags(html_message)
+
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=list(recipient_list),
+            html_message=html_message,
+            fail_silently=True,
+        )
+        logger.info(f"Staff payment notification sent for registration {registration.id} ({payment_type})")
+    except Exception as e:
+        logger.error(f"Failed to send staff payment notification: {str(e)}")
