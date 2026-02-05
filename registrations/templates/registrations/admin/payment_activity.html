@@ -1,0 +1,86 @@
+{% extends 'registrations/admin/base.html' %}
+{% load static %}
+
+{% block page_title %}Payment Activity{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+  <p style="margin-bottom: 20px; color: hsl(var(--admin-muted-foreground)); font-size: 14px;">
+    Every payment event is logged here: when a checkout is created (initiated), when payment succeeds, and when it fails. Use this to confirm and track all activity.
+  </p>
+
+  <!-- Filters -->
+  <form method="get" class="filter-bar" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+    <input 
+      type="text" 
+      class="filter-input" 
+      placeholder="Search by reference, name, email..."
+      value="{{ search_query }}"
+      name="search"
+    >
+    <select name="status" style="padding: 10px 14px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: white;">
+      <option value="">All statuses</option>
+      <option value="initiated" {% if status_filter == 'initiated' %}selected{% endif %}>Initiated</option>
+      <option value="success" {% if status_filter == 'success' %}selected{% endif %}>Success</option>
+      <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Search</button>
+    <a href="{% url 'admin_payment_activity' %}" class="btn btn-secondary">Clear</a>
+  </form>
+
+  <!-- Activity Table -->
+  <div class="data-table">
+    <div class="table-header">
+      <h2 class="table-title">All Payment Activity ({{ activities.count }})</h2>
+    </div>
+    <div class="table-content">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Status</th>
+            <th>Reference</th>
+            <th>Registration</th>
+            <th>Email</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in activities %}
+          <tr>
+            <td data-label="Time">{{ a.created_at|date:"M d, Y H:i:s" }}</td>
+            <td data-label="Status">
+              {% if a.status == 'success' %}
+                <span style="color: #34c759; font-weight: 600;">Success</span>
+              {% elif a.status == 'failed' %}
+                <span style="color: #ef4444; font-weight: 600;">Failed</span>
+              {% else %}
+                <span style="color: #0071e3; font-weight: 600;">Initiated</span>
+              {% endif %}
+            </td>
+            <td data-label="Reference" style="font-family: monospace; font-size: 12px;">{{ a.reference }}</td>
+            <td data-label="Registration" style="font-weight: 600;">
+              <a href="{% url 'view_registration' a.registration.id %}" style="color: #0071e3;">{{ a.registration.full_name }}</a>
+            </td>
+            <td data-label="Email">{{ a.registration.email }}</td>
+            <td data-label="Type">{{ a.get_payment_type_display }}</td>
+            <td data-label="Amount" style="font-weight: 600;">${{ a.amount|floatformat:2 }}</td>
+            <td data-label="Message" style="font-size: 12px; color: #64748b;">{{ a.message|default:"-" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 60px; color: hsl(var(--admin-muted-foreground));">
+              <iconify-icon icon="lucide:activity" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px;"></iconify-icon>
+              <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No payment activity yet</div>
+              <div>Activity appears when someone starts a payment or when Squad sends a webhook (success/failed).</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

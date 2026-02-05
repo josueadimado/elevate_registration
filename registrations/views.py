@@ -10,7 +10,7 @@ from django.conf import settings
 from django.urls import reverse
 from .forms import RegistrationForm
 from .models import (
-    Registration, Cohort, Dimension, PricingConfig, ProgramSettings
+    Registration, Cohort, Dimension, PricingConfig, ProgramSettings, PaymentActivity
 )
 from .utils import get_usd_to_ngn_rate
 from .emails import send_registration_confirmation_email, send_payment_complete_email, send_course_fee_payment_email
@@ -331,6 +331,9 @@ def initialize_payment(request):
         if data.get('status') == 200 and data.get('data'):
             checkout_url = data['data'].get('checkout_url')
             if checkout_url:
+                _log_payment_activity(
+                    registration, reference, 'initiated', payment_type, payment_amount
+                )
                 return JsonResponse({
                     'status': 'success',
                     'authorization_url': checkout_url,
@@ -363,6 +366,23 @@ def _parse_body_json(request):
         except (json.JSONDecodeError, TypeError):
             pass
     return {}
+
+
+def _log_payment_activity(registration, reference, status, payment_type, amount, message=None):
+    """Record a payment event for tracking (initiated, success, failed)."""
+    try:
+        PaymentActivity.objects.create(
+            registration=registration,
+            reference=reference,
+            status=status,
+            payment_type=payment_type,
+            amount=amount,
+            currency='USD',
+            gateway='squad',
+            message=message or '',
+        )
+    except Exception:
+        pass  # Don't fail the main flow if logging fails
 
 
 @csrf_exempt
@@ -448,6 +468,9 @@ def pay_registration_fee(request, registration_id):
             if checkout_url:
                 registration.squad_reference = reference
                 registration.save()
+                _log_payment_activity(
+                    registration, reference, 'initiated', payment_type, payment_amount
+                )
                 return JsonResponse({
                     'status': 'success',
                     'authorization_url': checkout_url,
@@ -544,6 +567,9 @@ def pay_course_fee(request, registration_id):
         if data.get('status') == 200 and data.get('data'):
             checkout_url = data['data'].get('checkout_url')
             if checkout_url:
+                _log_payment_activity(
+                    registration, reference, 'initiated', 'course_fee', course_fee_amount
+                )
                 return JsonResponse({
                     'status': 'success',
                     'authorization_url': checkout_url,
@@ -745,11 +771,21 @@ def squad_webhook(request):
                         channel=body.get('transaction_type', ''),
                         raw_payload=body
                     )
-                    
+                    _log_payment_activity(
+                        registration, transaction_ref, 'success', payment_type, amount_in_usd
+                    )
                     return HttpResponse('Webhook processed successfully', status=200)
                 else:
                     registration.status = 'FAILED'
                     registration.save()
+                    # Compute amount for activity log (same logic as success branch)
+                    _currency = (body.get('currency') or body.get('currency_code') or 'USD').upper()
+                    _subunit = float(body.get('amount', 0))
+                    _amount_usd = _subunit / 100 if _currency == 'USD' else (_subunit / 100) / (float(body.get('meta', {}).get('exchange_rate', 0)) or get_usd_to_ngn_rate())
+                    _log_payment_activity(
+                        registration, transaction_ref, 'failed', payment_type, _amount_usd,
+                        message=transaction_status or 'payment failed'
+                    )
                     return HttpResponse('Transaction failed', status=200)
             
             except Registration.DoesNotExist:

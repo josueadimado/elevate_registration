@@ -15,6 +15,7 @@ urlpatterns = [
     path('registrations/<uuid:registration_id>/edit/', admin_views.edit_registration, name='edit_registration'),
     path('registrations/<uuid:registration_id>/delete/', admin_views.delete_registration, name='delete_registration'),
     path('transactions/', admin_views.admin_transactions, name='admin_transactions'),
+    path('payment-activity/', admin_views.admin_payment_activity, name='admin_payment_activity'),
     path('settings/', admin_views.admin_settings, name='admin_settings'),
     path('settings/cohort/add/', admin_views.add_cohort, name='add_cohort'),
     path('settings/cohort/<int:cohort_id>/edit/', admin_views.edit_cohort, name='edit_cohort'),

@@ -8,7 +8,7 @@ from django.utils.safestring import mark_safe
 import csv
 from django.http import HttpResponse
 from .models import (
-    Registration, Transaction, Cohort, Dimension, 
+    Registration, Transaction, PaymentActivity, Cohort, Dimension, 
     PricingConfig, ProgramSettings
 )
 
@@ -79,7 +79,7 @@ class RegistrationAdmin(admin.ModelAdmin):
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
     """
-    Admin interface for viewing transactions.
+    Admin interface for viewing successful transactions.
     """
     list_display = ['reference', 'registration', 'amount', 'currency', 'channel', 'paid_at', 'created_at']
     list_filter = ['currency', 'channel', 'created_at']
@@ -95,6 +95,18 @@ class TransactionAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(PaymentActivity)
+class PaymentActivityAdmin(admin.ModelAdmin):
+    """
+    Admin interface for viewing all payment activity (initiated, success, failed).
+    """
+    list_display = ['created_at', 'reference', 'status', 'registration', 'payment_type', 'amount', 'gateway']
+    list_filter = ['status', 'payment_type', 'gateway', 'created_at']
+    search_fields = ['reference', 'registration__full_name', 'registration__email', 'message']
+    readonly_fields = ['id', 'created_at']
+    date_hierarchy = 'created_at'
 
 
 @admin.register(Cohort)

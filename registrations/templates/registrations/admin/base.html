@@ -385,6 +385,10 @@
           <iconify-icon icon="lucide:credit-card"></iconify-icon>
           <span>Transactions</span>
         </a>
+        <a href="{% url 'admin_payment_activity' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_payment_activity' %}active{% endif %}">
+          <iconify-icon icon="lucide:activity"></iconify-icon>
+          <span>Payment Activity</span>
+        </a>
         <a href="{% url 'admin_settings' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}">
           <iconify-icon icon="lucide:settings"></iconify-icon>
           <span>Settings</span>

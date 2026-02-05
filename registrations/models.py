@@ -142,7 +142,7 @@ class Registration(models.Model):
 
 class Transaction(models.Model):
     """
-    Stores transaction details from Paystack.
+    Stores successful payment details (from Squad webhook).
     """
     id = models.BigAutoField(primary_key=True)
     registration = models.ForeignKey(Registration, on_delete=models.CASCADE, related_name='transactions')
@@ -151,7 +151,7 @@ class Transaction(models.Model):
     currency = models.CharField(max_length=3, default='USD')
     paid_at = models.DateTimeField(null=True, blank=True)
     channel = models.CharField(max_length=50, blank=True, null=True)
-    raw_payload = models.JSONField(default=dict, help_text="Raw Paystack webhook payload")
+    raw_payload = models.JSONField(default=dict, help_text="Raw webhook payload")
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -161,6 +161,45 @@ class Transaction(models.Model):
     
     def __str__(self):
         return f"Transaction {self.reference} - {self.amount} {self.currency}"
+
+
+class PaymentActivity(models.Model):
+    """
+    Logs every payment-related event: initiated (checkout created), success, failed.
+    Use this to see all activity; Transaction only stores successful payments.
+    """
+    STATUS_CHOICES = [
+        ('initiated', 'Initiated'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+    ]
+    PAYMENT_TYPE_CHOICES = [
+        ('registration_fee', 'Registration Fee'),
+        ('course_fee', 'Course Fee'),
+        ('full_payment', 'Full Payment'),
+    ]
+    id = models.BigAutoField(primary_key=True)
+    registration = models.ForeignKey(
+        Registration, on_delete=models.CASCADE, related_name='payment_activities'
+    )
+    reference = models.CharField(max_length=100, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, db_index=True)
+    payment_type = models.CharField(
+        max_length=20, choices=PAYMENT_TYPE_CHOICES, default='registration_fee'
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='USD')
+    gateway = models.CharField(max_length=20, default='squad')
+    message = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Payment Activity'
+        verbose_name_plural = 'Payment Activities'
+    
+    def __str__(self):
+        return f"{self.reference} – {self.get_status_display()} – ${self.amount}"
 
 
 class Cohort(models.Model):

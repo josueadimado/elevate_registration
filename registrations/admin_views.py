@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from datetime import timedelta
 from .models import (
-    Registration, Transaction, Cohort, Dimension, 
+    Registration, Transaction, PaymentActivity, Cohort, Dimension, 
     PricingConfig, ProgramSettings
 )
 from .admin_forms import (
@@ -234,7 +234,7 @@ def export_registrations(request):
 @login_required
 def admin_transactions(request):
     """
-    View all transactions.
+    View all successful transactions.
     """
     transactions = Transaction.objects.select_related(
         'registration'
@@ -260,6 +260,40 @@ def admin_transactions(request):
     }
     
     return render(request, 'registrations/admin/transactions.html', context)
+
+
+@login_required
+def admin_payment_activity(request):
+    """
+    View all payment activity: initiated, success, failed (every event).
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    activities = PaymentActivity.objects.select_related(
+        'registration'
+    ).order_by('-created_at')
+    
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
+    if search_query:
+        activities = activities.filter(
+            Q(reference__icontains=search_query) |
+            Q(registration__full_name__icontains=search_query) |
+            Q(registration__email__icontains=search_query)
+        )
+    if status_filter:
+        activities = activities.filter(status=status_filter)
+    
+    context = {
+        'activities': activities,
+        'search_query': search_query,
+        'status_filter': status_filter,
+    }
+    
+    return render(request, 'registrations/admin/payment_activity.html', context)
 
 
 @login_required
