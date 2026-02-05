@@ -68,61 +68,63 @@ def admin_logout(request):
 @login_required
 def admin_dashboard(request):
     """
-    Custom admin dashboard with overview statistics and management tools.
+    Custom admin dashboard with overview statistics and payment status (full/half/pending).
     """
-    # Calculate statistics
-    total_registrations = Registration.objects.count()
-    paid_registrations = Registration.objects.filter(status='PAID').count()
-    pending_registrations = Registration.objects.filter(status='PENDING').count()
-    failed_registrations = Registration.objects.filter(status='FAILED').count()
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    base = Registration.objects.all()
+    total_registrations = base.count()
+    # Payment status by fees paid (aligned with registrations list)
+    full_paid_count = base.filter(registration_fee_paid=True, course_fee_paid=True).count()
+    half_paid_count = base.filter(
+        Q(registration_fee_paid=True, course_fee_paid=False) |
+        Q(registration_fee_paid=False, course_fee_paid=True)
+    ).count()
+    pending_count = base.filter(registration_fee_paid=False, course_fee_paid=False).count()
+    failed_registrations = base.filter(status='FAILED').count()
     
     # Revenue statistics
     total_revenue = Transaction.objects.aggregate(
         total=Sum('amount')
     )['total'] or 0
     
-    # Recent registrations (last 7 days)
+    # Recent registrations (last 7 days) with payment status
     seven_days_ago = timezone.now() - timedelta(days=7)
-    recent_registrations = Registration.objects.filter(
+    recent_registrations = Registration.objects.select_related(
+        'cohort', 'dimension'
+    ).filter(
         created_at__gte=seven_days_ago
     ).order_by('-created_at')[:10]
     
-    # Registrations by status
+    # Registrations by status (for any legacy use)
     registrations_by_status = Registration.objects.values('status').annotate(
         count=Count('id')
     )
-    
-    # Registrations by cohort
     registrations_by_cohort = Registration.objects.values(
         'cohort__name'
     ).annotate(
         count=Count('id')
     ).order_by('-count')
-    
-    # Registrations by dimension
     registrations_by_dimension = Registration.objects.values(
         'dimension__name'
     ).annotate(
         count=Count('id')
     ).order_by('-count')
     
-    # Recent transactions
     recent_transactions = Transaction.objects.select_related(
         'registration'
     ).order_by('-created_at')[:10]
     
-    # Active cohorts and dimensions
     active_cohorts = Cohort.objects.filter(is_active=True).count()
     active_dimensions = Dimension.objects.filter(is_active=True).count()
     
-    if not request.user.is_staff:
-        messages.error(request, 'You do not have permission to access this page.')
-        return redirect('admin_login')
-    
     context = {
         'total_registrations': total_registrations,
-        'paid_registrations': paid_registrations,
-        'pending_registrations': pending_registrations,
+        'full_paid_count': full_paid_count,
+        'half_paid_count': half_paid_count,
+        'pending_count': pending_count,
         'failed_registrations': failed_registrations,
         'total_revenue': total_revenue,
         'recent_registrations': recent_registrations,

@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from django.urls import reverse
+from django.db.models import Case, When, Value, IntegerField
 from .forms import RegistrationForm
 from .models import (
     Registration, Cohort, Dimension, PricingConfig, ProgramSettings, PaymentActivity
@@ -67,7 +68,18 @@ def home(request):
     Home page view.
     """
     cohorts = Cohort.objects.filter(is_active=True).order_by('name')
-    dimensions = Dimension.objects.filter(is_active=True).order_by('code')
+    # ASPIR order: A, S, P, I, R
+    dimensions = Dimension.objects.filter(is_active=True).annotate(
+        aspir_order=Case(
+            When(code='A', then=Value(0)),
+            When(code='S', then=Value(1)),
+            When(code='P', then=Value(2)),
+            When(code='I', then=Value(3)),
+            When(code='R', then=Value(4)),
+            default=Value(5),
+            output_field=IntegerField(),
+        )
+    ).order_by('aspir_order', 'code')
     
     # Get pricing for display
     pricing = {}
@@ -92,7 +104,18 @@ def register(request):
     Registration form view.
     """
     cohorts = Cohort.objects.filter(is_active=True).order_by('name')
-    dimensions = Dimension.objects.filter(is_active=True).order_by('code')
+    # ASPIR order: A, S, P, I, R
+    dimensions = Dimension.objects.filter(is_active=True).annotate(
+        aspir_order=Case(
+            When(code='A', then=Value(0)),
+            When(code='S', then=Value(1)),
+            When(code='P', then=Value(2)),
+            When(code='I', then=Value(3)),
+            When(code='R', then=Value(4)),
+            default=Value(5),
+            output_field=IntegerField(),
+        )
+    ).order_by('aspir_order', 'code')
     
     # Get current pricing config (default to NEW enrollment type)
     try:

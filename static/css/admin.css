@@ -1097,6 +1097,33 @@ tbody tr:hover {
   align-items: center;
 }
 
+.badge-pending {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border: 1px solid #e2e8f0 !important;
+  font-weight: 600;
+}
+
+/* Payment summary bar (dashboard + registrations list) */
+.payment-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 20px;
+  background: #fff;
+  border: 1px solid #d2d2d7;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #1d1d1f;
+}
+.payment-summary-bar .summary-item { white-space: nowrap; }
+.payment-summary-bar .summary-item strong { margin-right: 2px; }
+.payment-summary-bar .summary-pending { color: #64748b; }
+.payment-summary-bar .summary-half { color: #ff6b35; }
+.payment-summary-bar .summary-full { color: #34c759; }
+.payment-summary-bar .summary-failed { color: #ef4444; }
+
 /* Filters */
 .filter-bar {
   background: hsl(var(--admin-card));

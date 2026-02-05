@@ -5,6 +5,14 @@
 
 {% block content %}
 <div class="fade-in-up dashboard-page">
+  <!-- Payment status summary bar (same as Registrations page) -->
+  <div class="payment-summary-bar" style="margin-bottom: 24px;">
+    <span class="summary-item summary-pending"><strong>{{ pending_count }}</strong> pending payment</span>
+    <span class="summary-item summary-half"><strong>{{ half_paid_count }}</strong> half payment</span>
+    <span class="summary-item summary-full"><strong>{{ full_paid_count }}</strong> full payment</span>
+    {% if failed_registrations %}<span class="summary-item summary-failed"><strong>{{ failed_registrations }}</strong> failed</span>{% endif %}
+  </div>
+
   <!-- Statistics Cards -->
   <div class="stats-grid">
     <div class="stat-card">
@@ -15,24 +23,35 @@
         </div>
       </div>
       <div class="stat-card-value">{{ total_registrations }}</div>
-      <div class="stat-card-change">All time registrations</div>
+      <div class="stat-card-change">All trying to register</div>
     </div>
 
     <div class="stat-card">
       <div class="stat-card-header">
-        <span class="stat-card-title">Paid</span>
+        <span class="stat-card-title">Full paid</span>
         <div class="stat-card-icon success">
           <iconify-icon icon="lucide:check-circle"></iconify-icon>
         </div>
       </div>
-      <div class="stat-card-value">{{ paid_registrations }}</div>
+      <div class="stat-card-value">{{ full_paid_count }}</div>
       <div class="stat-card-change">
         {% if total_registrations > 0 %}
-          {% widthratio paid_registrations total_registrations 100 %}% completion rate
+          {% widthratio full_paid_count total_registrations 100 %}% completed
         {% else %}
           No registrations yet
         {% endif %}
       </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-card-title">Half paid</span>
+        <div class="stat-card-icon warning">
+          <iconify-icon icon="lucide:credit-card"></iconify-icon>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ half_paid_count }}</div>
+      <div class="stat-card-change">One fee paid, one pending</div>
     </div>
 
     <div class="stat-card">
@@ -42,7 +61,7 @@
           <iconify-icon icon="lucide:clock"></iconify-icon>
         </div>
       </div>
-      <div class="stat-card-value">{{ pending_registrations }}</div>
+      <div class="stat-card-value">{{ pending_count }}</div>
       <div class="stat-card-change">Awaiting payment</div>
     </div>
 
@@ -100,12 +119,16 @@
               {% endif %}
             </td>
             <td data-label="Status">
-              {% if registration.status == 'PAID' %}
-                <span class="badge badge-success">Paid</span>
-              {% elif registration.status == 'PENDING' %}
-                <span class="badge badge-warning">Pending</span>
-              {% else %}
+              {% if registration.status == 'FAILED' %}
                 <span class="badge badge-danger">Failed</span>
+              {% elif registration.registration_fee_paid and registration.course_fee_paid %}
+                <span class="badge badge-success">Full paid</span>
+              {% elif registration.registration_fee_paid %}
+                <span class="badge badge-warning" title="Registration fee paid; course fee pending">Half paid (reg)</span>
+              {% elif registration.course_fee_paid %}
+                <span class="badge badge-warning" title="Course fee paid; registration fee pending">Half paid (course)</span>
+              {% else %}
+                <span class="badge badge-pending">Pending</span>
               {% endif %}
             </td>
             <td data-label="Amount" style="font-weight: 600; color: #0071e3;">
@@ -118,6 +141,9 @@
             <td data-label="Date">{{ registration.created_at|date:"M d, Y" }}</td>
             <td>
               <div class="action-buttons">
+                <a href="{% url 'view_registration' registration.id %}" class="action-btn action-btn-view" title="View">
+                  <iconify-icon icon="lucide:eye"></iconify-icon>
+                </a>
                 <a href="{% url 'edit_registration' registration.id %}" class="action-btn action-btn-edit" title="Edit">
                   <iconify-icon icon="lucide:edit"></iconify-icon>
                 </a>
