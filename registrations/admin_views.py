@@ -141,6 +141,7 @@ def admin_dashboard(request):
 def admin_registrations(request):
     """
     View all registrations with filtering and search.
+    Shows payment type: Full paid, Half paid, Pending, and summary counts.
     """
     if not request.user.is_staff:
         messages.error(request, 'You do not have permission to access this page.')
@@ -152,6 +153,15 @@ def admin_registrations(request):
     search_query = request.GET.get('search', '')
     cohorts = Cohort.objects.filter(is_active=True)
     dimensions = Dimension.objects.filter(is_active=True)
+    # Payment summary counts (all registrations, no filters)
+    base = Registration.objects.all()
+    count_full_paid = base.filter(registration_fee_paid=True, course_fee_paid=True).count()
+    count_half_paid = base.filter(
+        Q(registration_fee_paid=True, course_fee_paid=False) |
+        Q(registration_fee_paid=False, course_fee_paid=True)
+    ).count()
+    count_pending = base.filter(registration_fee_paid=False, course_fee_paid=False).count()
+    count_failed = base.filter(status='FAILED').count()
     context = {
         'registrations': registrations,
         'cohorts': cohorts,
@@ -160,6 +170,10 @@ def admin_registrations(request):
         'cohort_filter': cohort_filter,
         'dimension_filter': dimension_filter,
         'search_query': search_query,
+        'count_full_paid': count_full_paid,
+        'count_half_paid': count_half_paid,
+        'count_pending': count_pending,
+        'count_failed': count_failed,
     }
     return render(request, 'registrations/admin/registrations.html', context)
 
@@ -168,6 +182,7 @@ def _get_filtered_registrations_queryset(request):
     """
     Returns the same filtered registrations queryset used on the list page.
     Used by admin_registrations and export_registrations.
+    Status filter: PAID (full), PENDING (no payment), HALF (half paid), FAILED.
     """
     registrations = Registration.objects.select_related(
         'cohort', 'dimension'
@@ -176,8 +191,17 @@ def _get_filtered_registrations_queryset(request):
     cohort_filter = request.GET.get('cohort', '')
     dimension_filter = request.GET.get('dimension', '')
     search_query = request.GET.get('search', '')
-    if status_filter:
-        registrations = registrations.filter(status=status_filter)
+    if status_filter == 'PAID':
+        registrations = registrations.filter(registration_fee_paid=True, course_fee_paid=True)
+    elif status_filter == 'PENDING':
+        registrations = registrations.filter(registration_fee_paid=False, course_fee_paid=False)
+    elif status_filter == 'HALF':
+        registrations = registrations.filter(
+            Q(registration_fee_paid=True, course_fee_paid=False) |
+            Q(registration_fee_paid=False, course_fee_paid=True)
+        )
+    elif status_filter == 'FAILED':
+        registrations = registrations.filter(status='FAILED')
     if cohort_filter:
         registrations = registrations.filter(cohort_id=cohort_filter)
     if dimension_filter:

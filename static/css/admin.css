@@ -375,16 +375,23 @@
   border-top: 1px solid hsla(0, 0%, 100%, 0.1);
 }
 
-/* Main Content */
+/* Main Content - allow shrinking so content can scroll, nothing hidden */
+.admin-wrapper {
+  min-width: 0;
+  overflow-x: hidden;
+  width: 100%;
+}
 .admin-main {
   flex: 1;
   margin-left: 280px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0; /* so flex child can shrink and show horizontal scroll inside .admin-content */
   transition: margin-left var(--transition-base);
+  width: 100%;
+  overflow: hidden;
 }
-
 .admin-main.sidebar-collapsed {
   margin-left: 0;
 }
@@ -402,6 +409,8 @@
   min-height: 80px;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 /* Adjust header padding when sidebar is collapsed */
@@ -449,6 +458,11 @@
 .admin-content {
   flex: 1;
   padding: 32px;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Messages */
@@ -841,6 +855,9 @@
 
 .table-content {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  margin: 0 -1px; /* avoid double scrollbar */
 }
 
 table {
@@ -1201,6 +1218,13 @@ tbody tr:hover {
   
   .page-title {
     font-size: 24px !important;
+  }
+  
+  /* Payment summary bar - wrap and stay visible */
+  .payment-summary-bar {
+    padding: 12px 16px !important;
+    gap: 12px !important;
+    font-size: 13px !important;
   }
   
   /* Stats grid - Single column on mobile */

@@ -5,6 +5,13 @@
 
 {% block content %}
 <div class="fade-in-up">
+  <!-- Payment summary: X pending, X half paid, X full paid -->
+  <div class="payment-summary-bar">
+    <span class="summary-item summary-pending"><strong>{{ count_pending }}</strong> pending payment</span>
+    <span class="summary-item summary-half"><strong>{{ count_half_paid }}</strong> half payment</span>
+    <span class="summary-item summary-full"><strong>{{ count_full_paid }}</strong> full payment</span>
+    {% if count_failed %}<span class="summary-item summary-failed"><strong>{{ count_failed }}</strong> failed</span>{% endif %}
+  </div>
   <!-- Filters -->
   <form method="get" class="filter-bar">
     <input 
@@ -16,7 +23,8 @@
     >
     <select name="status" class="filter-select" onchange="this.form.submit()">
       <option value="">All Status</option>
-      <option value="PAID" {% if status_filter == 'PAID' %}selected{% endif %}>Paid</option>
+      <option value="PAID" {% if status_filter == 'PAID' %}selected{% endif %}>Full paid</option>
+      <option value="HALF" {% if status_filter == 'HALF' %}selected{% endif %}>Half paid</option>
       <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
       <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
     </select>
@@ -96,12 +104,16 @@
               {% endif %}
             </td>
             <td data-label="Status">
-              {% if registration.status == 'PAID' %}
-                <span class="badge badge-success">Paid</span>
-              {% elif registration.status == 'PENDING' %}
-                <span class="badge badge-warning">Pending</span>
-              {% else %}
+              {% if registration.status == 'FAILED' %}
                 <span class="badge badge-danger">Failed</span>
+              {% elif registration.registration_fee_paid and registration.course_fee_paid %}
+                <span class="badge badge-success">Full paid</span>
+              {% elif registration.registration_fee_paid %}
+                <span class="badge badge-warning" title="Registration fee paid; course fee pending">Half paid (reg)</span>
+              {% elif registration.course_fee_paid %}
+                <span class="badge badge-warning" title="Course fee paid; registration fee pending">Half paid (course)</span>
+              {% else %}
+                <span class="badge badge-pending">Pending</span>
               {% endif %}
             </td>
             <td data-label="Date">{{ registration.created_at|date:"M d, Y" }}</td>
@@ -138,6 +150,31 @@
 </div>
 
 <style>
+  .payment-summary-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 14px 20px;
+    background: #fff;
+    border: 1px solid #d2d2d7;
+    border-radius: 12px;
+    font-size: 14px;
+    color: #1d1d1f;
+  }
+  .payment-summary-bar .summary-item { white-space: nowrap; }
+  .payment-summary-bar .summary-item strong { margin-right: 2px; }
+  .summary-pending { color: #64748b; }
+  .summary-half { color: #ff6b35; }
+  .summary-full { color: #34c759; }
+  .summary-failed { color: #ef4444; }
+  .badge-pending {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    font-weight: 600;
+  }
   .action-btn-view {
     background: #0071e3;
     color: white;
@@ -151,13 +188,11 @@
     transition: all 0.2s ease;
     text-decoration: none;
   }
-  
   .action-btn-view:hover {
     background: #0077ed;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 113, 227, 0.2);
   }
-  
   .action-buttons {
     display: flex;
     gap: 8px;
