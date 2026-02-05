@@ -389,6 +389,10 @@
           <iconify-icon icon="lucide:activity"></iconify-icon>
           <span>Payment Activity</span>
         </a>
+        <a href="{% url 'admin_reconcile_payment' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_reconcile_payment' %}active{% endif %}">
+          <iconify-icon icon="lucide:refresh-cw"></iconify-icon>
+          <span>Reconcile Payment</span>
+        </a>
         <a href="{% url 'admin_settings' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}">
           <iconify-icon icon="lucide:settings"></iconify-icon>
           <span>Settings</span>

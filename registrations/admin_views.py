@@ -2,16 +2,24 @@
 Custom admin dashboard views for managing registrations and program settings.
 """
 import csv
+import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
+from django.conf import settings as django_settings
 from django.http import JsonResponse, HttpResponse
 from datetime import timedelta
 from .models import (
     Registration, Transaction, PaymentActivity, Cohort, Dimension, 
     PricingConfig, ProgramSettings
+)
+from .views import _registration_from_ref
+from .emails import (
+    send_registration_confirmation_email,
+    send_payment_complete_email,
+    send_course_fee_payment_email,
 )
 from .admin_forms import (
     AdminEditRegistrationForm, AdminEditCohortForm,
@@ -294,6 +302,154 @@ def admin_payment_activity(request):
     }
     
     return render(request, 'registrations/admin/payment_activity.html', context)
+
+
+@login_required
+def admin_reconcile_payment(request):
+    """
+    Reconcile a payment by reference when the webhook was missed.
+    Verifies with Squad API and then updates registration, creates Transaction, logs activity, sends email.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    
+    if request.method == 'POST':
+        reference = (request.POST.get('reference') or '').strip()
+        if not reference:
+            messages.error(request, 'Please enter a payment reference.')
+            return redirect('admin_reconcile_payment')
+        
+        try:
+            registration = _registration_from_ref(reference)
+        except Registration.DoesNotExist:
+            messages.error(request, f'No registration found for reference: {reference}')
+            return redirect('admin_reconcile_payment')
+        
+        # Already have a Transaction for this reference?
+        if Transaction.objects.filter(reference=reference).exists():
+            messages.warning(
+                request,
+                f'This payment is already recorded (reference: {reference}). Registration and Transaction are up to date.'
+            )
+            return redirect('view_registration', registration_id=registration.id)
+        
+        # Verify with Squad API
+        url = f"{django_settings.SQUAD_BASE_URL}/transaction"
+        auth_key = (getattr(django_settings, 'SQUAD_SECRET_KEY') or '').strip()
+        if not auth_key.startswith('Bearer '):
+            auth_key = f'Bearer {auth_key}'
+        headers = {'Authorization': auth_key, 'Content-Type': 'application/json'}
+        params = {'reference': reference, 'currency': 'USD'}
+        
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=15)
+            data = response.json()
+        except Exception as e:
+            messages.error(request, f'Could not reach Squad API: {e}')
+            return redirect('admin_reconcile_payment')
+        
+        if not (data.get('status') == 200 and data.get('success')):
+            messages.error(
+                request,
+                f'Squad returned an error. Check the reference or try again. (status={data.get("status")})'
+            )
+            return redirect('admin_reconcile_payment')
+        
+        raw_data = data.get('data', [])
+        transactions = raw_data if isinstance(raw_data, list) else [raw_data] if raw_data else []
+        if not transactions:
+            messages.error(request, 'Squad did not return any transaction for this reference.')
+            return redirect('admin_reconcile_payment')
+        
+        txn = transactions[0]
+        if (txn.get('transaction_status') or '').lower() != 'success':
+            messages.error(request, f'Payment was not successful on Squad (status: {txn.get("transaction_status")}).')
+            return redirect('admin_reconcile_payment')
+        
+        # Determine payment type from reference prefix
+        if reference.startswith('ASPIR-FULL-'):
+            payment_type = 'full_payment'
+        elif reference.startswith('ASPIR-COURSE-'):
+            payment_type = 'course_fee'
+        elif reference.startswith('ASPIR-REG-'):
+            payment_type = 'registration_fee'
+        else:
+            payment_type = (txn.get('meta') or {}).get('payment_type') or 'registration_fee'
+        
+        # Amount: Squad usually returns in smallest unit (cents for USD)
+        amount_subunit = float(txn.get('amount', 0))
+        currency = (txn.get('currency') or 'USD').upper()
+        if currency == 'USD':
+            amount_in_usd = amount_subunit / 100
+        else:
+            from .utils import get_usd_to_ngn_rate
+            rate = get_usd_to_ngn_rate()
+            amount_in_usd = (amount_subunit / 100) / rate
+        paid_at = timezone.now()
+        if txn.get('created_at'):
+            try:
+                from django.utils.dateparse import parse_datetime
+                paid_at = parse_datetime(txn['created_at']) or paid_at
+            except Exception:
+                pass
+        
+        # Update registration
+        if payment_type == 'full_payment' or reference.startswith('ASPIR-FULL-'):
+            registration.registration_fee_paid = True
+            registration.course_fee_paid = True
+            registration.status = 'PAID'
+        elif payment_type == 'registration_fee' or reference.startswith('ASPIR-REG-'):
+            registration.registration_fee_paid = True
+            registration.status = 'PENDING'
+        elif payment_type == 'course_fee' or reference.startswith('ASPIR-COURSE-'):
+            registration.course_fee_paid = True
+            registration.status = 'PAID' if (registration.registration_fee_paid and registration.course_fee_paid) else 'PENDING'
+        registration.save()
+        
+        # Create Transaction record
+        Transaction.objects.get_or_create(
+            reference=reference,
+            defaults={
+                'registration': registration,
+                'amount': amount_in_usd,
+                'currency': 'USD',
+                'paid_at': paid_at,
+                'channel': txn.get('transaction_type', '') or 'squad',
+                'raw_payload': txn,
+            }
+        )
+        # Log success in PaymentActivity
+        PaymentActivity.objects.create(
+            registration=registration,
+            reference=reference,
+            status='success',
+            payment_type=payment_type,
+            amount=amount_in_usd,
+            currency='USD',
+            gateway='squad',
+            message='Reconciled from admin',
+        )
+        # Send appropriate email
+        try:
+            if payment_type == 'full_payment' or reference.startswith('ASPIR-FULL-'):
+                send_payment_complete_email(registration)
+            elif payment_type == 'registration_fee' or reference.startswith('ASPIR-REG-'):
+                send_registration_confirmation_email(registration)
+            elif payment_type == 'course_fee' or reference.startswith('ASPIR-COURSE-'):
+                if registration.is_fully_paid():
+                    send_payment_complete_email(registration)
+                else:
+                    send_course_fee_payment_email(registration)
+        except Exception:
+            pass
+        messages.success(
+            request,
+            f'Payment reconciled successfully for {registration.full_name}. Transaction created and registration updated.'
+        )
+        return redirect('view_registration', registration_id=registration.id)
+    
+    return render(request, 'registrations/admin/reconcile_payment.html', {})
 
 
 @login_required
