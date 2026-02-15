@@ -1,0 +1,50 @@
+{% extends 'registrations/admin/base.html' %}
+{% load static %}
+
+{% block page_title %}Import Registrations (CSV){% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+  <div style="max-width: 640px; margin: 0 auto;">
+    <h2 class="table-title" style="margin-bottom: 8px;">Import registrations from CSV</h2>
+    <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+      For clients who cannot pay online, you can register them manually. Download the template, fill in their details (you can delete the example row), then upload the CSV here. Each row becomes a registration (status: Pending). They can pay later or you can reconcile payments when they pay offline.
+    </p>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px;">
+      <a href="{% url 'download_registrations_template' %}" class="btn btn-secondary">
+        <iconify-icon icon="lucide:download"></iconify-icon>
+        Download CSV template
+      </a>
+      <a href="{% url 'admin_registrations' %}" class="btn btn-outline" style="border: 1px solid #d2d2d7; color: #1d1d1f;">
+        Back to Registrations
+      </a>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px; font-size: 13px; color: #475569;">
+      <strong style="color: #1d1d1f;">Template columns:</strong>
+      <code style="display: block; margin-top: 8px; word-break: break-all;">full_name, email, phone, country, age, group, cohort, dimension, enrollment_type, amount, currency, guardian_name, guardian_phone, referral_source</code>
+      <p style="margin: 12px 0 0 0;">Use <strong>group</strong> G1 or G2; <strong>cohort</strong> C1 or C2 (or cohort name); <strong>dimension</strong> A, S, P, I, or R; <strong>enrollment_type</strong> NEW or RETURNING; <strong>currency</strong> USD. Leave amount empty to use default pricing.</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" style="background: hsl(var(--admin-card)); border: 1px solid hsl(var(--admin-border)); border-radius: 12px; padding: 24px;">
+      {% csrf_token %}
+      <label style="display: block; font-weight: 600; margin-bottom: 8px;">Choose CSV file</label>
+      <input
+        type="file"
+        name="csv_file"
+        accept=".csv"
+        required
+        style="width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 14px;"
+      >
+      <div style="margin-top: 20px; display: flex; gap: 12px;">
+        <button type="submit" class="btn btn-primary">
+          <iconify-icon icon="lucide:upload"></iconify-icon>
+          Upload and import
+        </button>
+        <a href="{% url 'admin_registrations' %}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

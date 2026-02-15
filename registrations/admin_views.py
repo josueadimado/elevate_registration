@@ -2,6 +2,7 @@
 Custom admin dashboard views for managing registrations and program settings.
 """
 import csv
+import io
 import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages, auth
@@ -264,6 +265,196 @@ def export_registrations(request):
             r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
         ])
     return response
+
+
+# CSV template columns for manual registration import (must match import logic)
+REGISTRATION_CSV_HEADERS = [
+    'full_name', 'email', 'phone', 'country', 'age', 'group', 'cohort', 'dimension',
+    'enrollment_type', 'amount', 'currency', 'guardian_name', 'guardian_phone', 'referral_source',
+]
+
+
+@login_required
+def download_registrations_template(request):
+    """
+    Download a CSV template for manual registration import.
+    Fill the rows and upload via Import (CSV) to create registrations.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = (
+        'attachment; filename="aspir_registrations_template.csv"'
+    )
+    writer = csv.writer(response)
+    writer.writerow(REGISTRATION_CSV_HEADERS)
+    # One example row (commented in instructions - we add a real example so format is clear)
+    writer.writerow([
+        'Jane Doe',
+        'jane@example.com',
+        '+233201234567',
+        'Ghana',
+        '14',
+        'G1',
+        'C1',
+        'S',
+        'RETURNING',
+        '120',
+        'USD',
+        'John Doe',
+        '+233209876543',
+        'Word of mouth',
+    ])
+    return response
+
+
+def _resolve_cohort(cohort_value):
+    """Resolve cohort from CSV value: C1, C2, or cohort name. Returns Cohort or None."""
+    if not cohort_value or not str(cohort_value).strip():
+        return None
+    v = str(cohort_value).strip().upper()
+    # Try by code first
+    cohort = Cohort.objects.filter(code__iexact=v, is_active=True).first()
+    if cohort:
+        return cohort
+    # Try by name (e.g. "Cohort 1")
+    cohort = Cohort.objects.filter(name__icontains=v.replace('COHORT ', 'Cohort '), is_active=True).first()
+    if cohort:
+        return cohort
+    return Cohort.objects.filter(name__icontains=cohort_value.strip(), is_active=True).first()
+
+
+def _resolve_dimension(dim_value):
+    """Resolve dimension from CSV value: A, S, P, I, R. Returns Dimension or None."""
+    if not dim_value or not str(dim_value).strip():
+        return None
+    code = str(dim_value).strip().upper()[0]
+    return Dimension.objects.filter(code=code, is_active=True).first()
+
+
+@login_required
+def import_registrations(request):
+    """
+    Upload a CSV file to create registrations manually (for clients who cannot pay online).
+    CSV must have headers matching REGISTRATION_CSV_HEADERS.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+
+    if request.method == 'POST' and request.FILES.get('csv_file'):
+        uploaded = request.FILES['csv_file']
+        if not uploaded.name.lower().endswith('.csv'):
+            messages.error(request, 'Please upload a CSV file.')
+            return redirect('admin_import_registrations')
+
+        try:
+            content = uploaded.read().decode('utf-8-sig').strip()
+        except UnicodeDecodeError:
+            try:
+                content = uploaded.read().decode('latin-1').strip()
+            except Exception:
+                messages.error(request, 'Could not read the file. Use UTF-8 or Latin-1 encoding.')
+                return redirect('admin_import_registrations')
+
+        reader = csv.DictReader(io.StringIO(content))
+        created = 0
+        errors = []
+        for row_num, row in enumerate(reader, start=2):
+            if not row:
+                continue
+            # Normalize keys (strip spaces)
+            row = {k.strip(): v for k, v in row.items() if k}
+            full_name = (row.get('full_name') or '').strip()
+            email = (row.get('email') or '').strip()
+            if not full_name or not email:
+                errors.append(f'Row {row_num}: full_name and email are required.')
+                continue
+
+            phone = (row.get('phone') or '').strip() or ''
+            country = (row.get('country') or '').strip() or ''
+            try:
+                age = int((row.get('age') or '0').strip() or 0)
+            except ValueError:
+                age = 0
+            if age < 10 or age > 22:
+                errors.append(f'Row {row_num}: age must be between 10 and 22.')
+                continue
+
+            group = (row.get('group') or '').strip().upper()
+            if group not in ('G1', 'G2'):
+                group = 'G1' if age <= 15 else 'G2'
+            cohort_val = (row.get('cohort') or '').strip()
+            dimension_val = (row.get('dimension') or '').strip()
+            enrollment_type = (row.get('enrollment_type') or '').strip().upper()
+            if enrollment_type not in ('NEW', 'RETURNING'):
+                enrollment_type = 'NEW'
+            try:
+                amount = float((row.get('amount') or '0').strip().replace(',', '') or 0)
+            except ValueError:
+                amount = 0
+            currency = (row.get('currency') or 'USD').strip().upper() or 'USD'
+            guardian_name = (row.get('guardian_name') or '').strip() or None
+            guardian_phone = (row.get('guardian_phone') or '').strip() or None
+            referral_source = (row.get('referral_source') or '').strip() or None
+
+            cohort = _resolve_cohort(cohort_val)
+            dimension = _resolve_dimension(dimension_val)
+            if not cohort:
+                errors.append(f'Row {row_num}: cohort "{cohort_val}" not found. Use C1, C2 or exact cohort name.')
+                continue
+            if not dimension:
+                errors.append(f'Row {row_num}: dimension "{dimension_val}" not found. Use A, S, P, I, or R.')
+                continue
+
+            if amount <= 0:
+                try:
+                    pricing = PricingConfig.objects.get(enrollment_type=enrollment_type, is_active=True)
+                    amount = float(pricing.total_amount)
+                except PricingConfig.DoesNotExist:
+                    amount = 150.00 if enrollment_type == 'NEW' else 120.00
+
+            if Registration.objects.filter(email__iexact=email).exists():
+                errors.append(f'Row {row_num}: a registration with email "{email}" already exists.')
+                continue
+
+            try:
+                Registration.objects.create(
+                    full_name=full_name,
+                    email=email,
+                    phone=phone,
+                    country=country,
+                    age=age,
+                    group=group,
+                    cohort=cohort,
+                    dimension=dimension,
+                    cohort_code=cohort.code,
+                    dimension_code=dimension.code,
+                    enrollment_type=enrollment_type,
+                    amount=amount,
+                    currency=currency,
+                    status='PENDING',
+                    guardian_name=guardian_name,
+                    guardian_phone=guardian_phone,
+                    referral_source=referral_source,
+                )
+                created += 1
+            except Exception as e:
+                errors.append(f'Row {row_num}: {str(e)}')
+
+        if errors:
+            for err in errors[:20]:
+                messages.error(request, err)
+            if len(errors) > 20:
+                messages.error(request, f'... and {len(errors) - 20} more errors.')
+        if created:
+            messages.success(request, f'{created} registration(s) created successfully. They can pay later or you can reconcile payments.')
+        if created == 0 and not errors:
+            messages.warning(request, 'No rows were imported. Check that the CSV has a header row and data rows with full_name and email.')
+        return redirect('admin_registrations')
+
+    return render(request, 'registrations/admin/import_registrations.html', {})
 
 
 @login_required

@@ -53,6 +53,14 @@
     <div class="table-header">
       <h2 class="table-title">All Registrations ({{ registrations.count }})</h2>
       <div class="table-header-actions">
+        <a href="{% url 'download_registrations_template' %}" class="btn btn-secondary btn-sm" title="Download template to fill and import registrations">
+          <iconify-icon icon="lucide:file-down"></iconify-icon>
+          Template
+        </a>
+        <a href="{% url 'admin_import_registrations' %}" class="btn btn-secondary btn-sm" title="Upload CSV to register participants manually">
+          <iconify-icon icon="lucide:upload"></iconify-icon>
+          Import CSV
+        </a>
         <a href="{% url 'export_registrations' %}?{{ request.GET.urlencode }}" class="btn btn-secondary btn-sm" title="Export current list as CSV">
           <iconify-icon icon="lucide:download"></iconify-icon>
           Export CSV
