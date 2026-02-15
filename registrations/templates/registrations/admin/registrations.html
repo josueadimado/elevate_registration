@@ -51,7 +51,7 @@
   <!-- Registrations Table -->
   <div class="data-table">
     <div class="table-header">
-      <h2 class="table-title">All Registrations ({{ registrations.count }})</h2>
+      <h2 class="table-title">All Registrations ({{ page_obj.paginator.count }})</h2>
       <div class="table-header-actions">
         <a href="{% url 'download_registrations_template' %}" class="btn btn-secondary btn-sm" title="Download template to fill and import registrations">
           <iconify-icon icon="lucide:file-down"></iconify-icon>
@@ -154,10 +154,52 @@
         </tbody>
       </table>
     </div>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="table-pagination">
+      <span class="pagination-info">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+      </span>
+      <nav class="pagination-nav" aria-label="Registrations pagination">
+        {% if page_obj.has_previous %}
+          <a href="?{% if query_string %}{{ query_string }}&{% endif %}page=1" class="btn btn-secondary btn-sm">First</a>
+          <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}" class="btn btn-secondary btn-sm">Previous</a>
+        {% endif %}
+        <span class="pagination-current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}" class="btn btn-secondary btn-sm">Next</a>
+          <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.paginator.num_pages }}" class="btn btn-secondary btn-sm">Last</a>
+        {% endif %}
+      </nav>
+    </div>
+    {% endif %}
   </div>
 </div>
 
 <style>
+  .table-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid #d2d2d7;
+    background: #f5f5f7;
+  }
+  .pagination-info {
+    font-size: 14px;
+    color: #64748b;
+  }
+  .pagination-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .pagination-current {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d1d1f;
+  }
   .payment-summary-bar {
     display: flex;
     flex-wrap: wrap;

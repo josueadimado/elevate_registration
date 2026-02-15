@@ -7,6 +7,7 @@ import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from django.conf import settings as django_settings
@@ -140,16 +141,19 @@ def admin_dashboard(request):
     return render(request, 'registrations/admin/dashboard.html', context)
 
 
+PAGINATE_BY = 25
+
+
 @login_required
 def admin_registrations(request):
     """
-    View all registrations with filtering and search.
+    View all registrations with filtering, search, and pagination.
     Shows payment type: Full paid, Half paid, Pending, and summary counts.
     """
     if not request.user.is_staff:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('admin_login')
-    registrations = _get_filtered_registrations_queryset(request)
+    registrations_qs = _get_filtered_registrations_queryset(request)
     status_filter = request.GET.get('status', '')
     cohort_filter = request.GET.get('cohort', '')
     dimension_filter = request.GET.get('dimension', '')
@@ -165,8 +169,23 @@ def admin_registrations(request):
     ).count()
     count_pending = base.filter(registration_fee_paid=False, course_fee_paid=False).count()
     count_failed = base.filter(status='FAILED').count()
+    # Paginate
+    paginator = Paginator(registrations_qs, PAGINATE_BY)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    # Query string for pagination links (preserve filters, exclude page)
+    q = request.GET.copy()
+    q.pop('page', None)
+    query_string = q.urlencode()
     context = {
-        'registrations': registrations,
+        'page_obj': page_obj,
+        'registrations': page_obj.object_list,
+        'query_string': query_string,
         'cohorts': cohorts,
         'dimensions': dimensions,
         'status_filter': status_filter,
