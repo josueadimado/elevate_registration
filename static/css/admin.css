@@ -483,29 +483,53 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Message boxes: readable colors only, no yellow (#ffffcf etc.) */
 .message-success {
-  background: hsl(var(--admin-success-bg));
-  color: hsl(var(--admin-success));
-  border: 1px solid hsl(var(--admin-success) / 0.3);
+  background: #dcfce7 !important;  /* light green */
+  color: #166534 !important;      /* dark green */
+  border: 1px solid rgba(22, 101, 52, 0.3);
   font-weight: 500;
 }
 
 .message-error {
-  background: hsl(var(--admin-danger-bg));
-  color: hsl(var(--admin-danger));
-  border: 1px solid hsl(var(--admin-danger) / 0.3);
+  background: #fee2e2 !important; /* light red */
+  color: #b91c1c !important;     /* dark red */
+  border: 1px solid rgba(185, 28, 28, 0.3);
   font-weight: 500;
 }
 
 .message-info {
-  background: hsl(var(--admin-info-bg));
-  color: hsl(var(--admin-info));
-  border: 1px solid hsl(var(--admin-info) / 0.3);
+  background: #dbeafe !important; /* light blue */
+  color: #1e40af !important;     /* dark blue */
+  border: 1px solid rgba(30, 64, 175, 0.3);
+  font-weight: 500;
+}
+
+.message-warning {
+  background: #fff4f0 !important;  /* light orange, no yellow */
+  color: #c2410c !important;      /* dark orange */
+  border: 1px solid rgba(194, 65, 12, 0.3);
   font-weight: 500;
 }
 
 .message iconify-icon {
   font-size: 20px;
+}
+
+/* Ensure no message box ever uses yellow (#ffffcf or similar) */
+.messages-container .message,
+.message.message-success,
+.message.message-error,
+.message.message-info,
+.message.message-warning {
+  background-image: none !important;
+}
+.messages-container .message[style*="ffffcf"],
+.messages-container .message[style*="ffffcc"],
+.messages-container .message[style*="fff3"],
+.messages-container .message[style*="yellow"] {
+  background: #dcfce7 !important;
+  color: #166534 !important;
 }
 
 /* Stats Cards */
@@ -912,12 +936,14 @@ tbody tr[style*="yellow"],
 tbody tr[style*="Yellow"],
 td[style*="yellow"],
 td[style*="Yellow"],
+*[style*="#ffffcf"],
+*[style*="#ffffcc"],
+*[style*="#ffff99"],
+*[style*="#ffff00"],
 *[style*="#ffd"],
 *[style*="#ffc"],
 *[style*="#ffb"],
 *[style*="#ffa"],
-*[style*="#ffff99"],
-*[style*="#ffff00"],
 *[style*="#ffeb3b"],
 *[style*="#ffc107"],
 *[style*="#ffd700"],
@@ -938,12 +964,14 @@ td[style*="Yellow"],
 *[style*="color:yellow"],
 *[style*="color: Yellow"],
 *[style*="color:YELLOW"],
+*[style*="color:#ffffcf"],
+*[style*="color:#ffffcc"],
+*[style*="color:#ffff99"],
+*[style*="color:#ffff00"],
 *[style*="color:#ffd"],
 *[style*="color:#ffc"],
 *[style*="color:#ffb"],
 *[style*="color:#ffa"],
-*[style*="color:#ffff99"],
-*[style*="color:#ffff00"],
 *[style*="color:#ffeb3b"],
 *[style*="color:#ffc107"],
 *[style*="color:#ffd700"],
