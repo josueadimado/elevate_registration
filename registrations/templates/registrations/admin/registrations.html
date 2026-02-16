@@ -79,6 +79,7 @@
             <th>Email</th>
             <th>Cohort</th>
             <th>Dimension</th>
+            <th>Participant ID</th>
             <th>Amount</th>
             <th>Status</th>
             <th>Date</th>
@@ -102,6 +103,13 @@
                 <span class="badge badge-info">{{ registration.dimension.code }}</span>
               {% else %}
                 -
+              {% endif %}
+            </td>
+            <td data-label="Participant ID">
+              {% if registration.participant_id %}
+                <span style="font-family: monospace; font-size: 13px; color: #0071e3;">{{ registration.participant_id }}</span>
+              {% else %}
+                <span style="color: #86868b;">—</span>
               {% endif %}
             </td>
             <td data-label="Amount" style="font-weight: 600; color: #0071e3;">
@@ -144,7 +152,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" style="text-align: center; padding: 60px; color: #86868b;">
+            <td colspan="9" style="text-align: center; padding: 60px; color: #86868b;">
               <iconify-icon icon="lucide:inbox" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px;"></iconify-icon>
               <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No registrations found</div>
               <div>Try adjusting your filters</div>

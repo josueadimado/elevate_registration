@@ -13,7 +13,7 @@ from .forms import RegistrationForm
 from .models import (
     Registration, Cohort, Dimension, PricingConfig, ProgramSettings, PaymentActivity
 )
-from .utils import get_usd_to_ngn_rate
+from .utils import get_usd_to_ngn_rate, generate_participant_id
 from .emails import (
     send_registration_confirmation_email,
     send_payment_complete_email,
@@ -736,7 +736,8 @@ def squad_webhook(request):
                     # Send appropriate email based on payment type
                     try:
                         if payment_type == 'full_payment' or transaction_ref.startswith('ASPIR-FULL-'):
-                            # Full payment - send payment complete email
+                            # Full payment - generate participant ID then send payment complete email
+                            generate_participant_id(registration)
                             send_payment_complete_email(registration)
                         elif payment_type == 'registration_fee' or transaction_ref.startswith('ASPIR-REG-'):
                             # Registration fee paid - send registration confirmation
@@ -744,7 +745,8 @@ def squad_webhook(request):
                         elif payment_type == 'course_fee' or transaction_ref.startswith('ASPIR-COURSE-'):
                             # Course fee paid - check if fully paid now
                             if registration.is_fully_paid():
-                                # Just became fully paid - send payment complete email
+                                # Just became fully paid - generate participant ID then send payment complete email
+                                generate_participant_id(registration)
                                 send_payment_complete_email(registration)
                             else:
                                 # Only course fee paid (registration fee was already paid) - send course fee confirmation

@@ -214,3 +214,44 @@ def send_staff_payment_notification_email(registration, payment_type, amount_pai
         logger.info(f"Staff payment notification sent for registration {registration.id} ({payment_type})")
     except Exception as e:
         logger.error(f"Failed to send staff payment notification: {str(e)}")
+
+
+def send_participant_id_email(registration):
+    """
+    Send an email to the participant with their ASPIR participant ID.
+    Use when generating/sending ID to existing registrations (e.g. from admin).
+    Generates the ID if missing (when cohort and dimension are set).
+    """
+    from .utils import generate_participant_id
+
+    # Ensure ID exists (generate if possible)
+    if not getattr(registration, 'participant_id', None) and registration.cohort and registration.dimension:
+        generate_participant_id(registration)
+
+    if not registration.participant_id:
+        logger.warning(f"Cannot send participant ID email: no participant_id and cannot generate (registration {registration.id})")
+        return False
+
+    try:
+        site_url = getattr(settings, 'SITE_URL', 'https://elevatetribeanalytics.com')
+        context = {
+            'registration': registration,
+            'support_email': getattr(settings, 'SUPPORT_EMAIL', 'info@elevatetribeanalytics.com'),
+            'site_url': site_url,
+        }
+        subject = 'Your ASPIR Participant ID'
+        html_message = render_to_string('registrations/emails/participant_id_email.html', context)
+        plain_message = strip_tags(html_message)
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[registration.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        logger.info(f"Participant ID email sent to {registration.email} for registration {registration.id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send participant ID email: {str(e)}")
+        return False

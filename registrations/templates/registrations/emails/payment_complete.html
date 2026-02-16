@@ -101,6 +101,10 @@
             
             <div class="info-box">
                 <h3 style="color: #1d1d1f; font-size: 18px; margin-top: 0; margin-bottom: 16px;">Your Enrollment Details</h3>
+                {% if registration.participant_id %}
+                <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Your Participant ID:</strong> <span style="color: #0071e3; font-weight: 700; font-size: 18px;">{{ registration.participant_id }}</span></p>
+                <p style="margin: 8px 0 16px 0; font-size: 13px; color: #86868b;">Please save this ID — you may need it for program materials and communications.</p>
+                {% endif %}
                 <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Name:</strong> {{ registration.full_name }}</p>
                 <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Email:</strong> {{ registration.email }}</p>
                 <p style="margin: 8px 0; color: #64748b;"><strong style="color: #1d1d1f;">Cohort:</strong> {% if registration.cohort %}{{ registration.cohort.name }}{% else %}N/A{% endif %}</p>

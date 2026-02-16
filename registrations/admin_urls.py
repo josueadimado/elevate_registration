@@ -14,6 +14,7 @@ urlpatterns = [
     path('registrations/template/', admin_views.download_registrations_template, name='download_registrations_template'),
     path('registrations/add/', admin_views.add_registration, name='add_registration'),
     path('registrations/<uuid:registration_id>/', admin_views.view_registration, name='view_registration'),
+    path('registrations/<uuid:registration_id>/send-participant-id/', admin_views.send_participant_id_email_view, name='send_participant_id_email'),
     path('registrations/<uuid:registration_id>/edit/', admin_views.edit_registration, name='edit_registration'),
     path('registrations/<uuid:registration_id>/delete/', admin_views.delete_registration, name='delete_registration'),
     path('transactions/', admin_views.admin_transactions, name='admin_transactions'),

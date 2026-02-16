@@ -81,6 +81,12 @@ class Registration(models.Model):
     registration_fee_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Registration fee amount")
     course_fee_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Course fee amount")
     
+    # Participant ID: ET/ASPIR/{cohort_code}/{dimension_code}/{sequence} e.g. ET/ASPIR/C1/A/1001
+    participant_id = models.CharField(
+        max_length=50, unique=True, blank=True, null=True,
+        help_text="Generated ID e.g. ET/ASPIR/C1/A/0001 (cohort + dimension + sequence)"
+    )
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

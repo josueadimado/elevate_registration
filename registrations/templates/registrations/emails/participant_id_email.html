@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your ASPIR Participant ID</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', Helvetica, Arial, sans-serif; line-height: 1.6; color: #1d1d1f; background-color: #f5f5f7; margin: 0; padding: 0; }
+        .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .email-header { background: linear-gradient(135deg, #0071e3, #005bb5); padding: 32px 20px; text-align: center; }
+        .email-header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; }
+        .email-content { padding: 32px 24px; }
+        .id-box { background: #f5f5f7; border: 2px solid #0071e3; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center; }
+        .id-box .participant-id { font-size: 22px; font-weight: 700; color: #0071e3; letter-spacing: 0.05em; font-family: 'SF Mono', Monaco, monospace; }
+        .footer { background: #1d1d1f; color: #ffffff; padding: 24px; text-align: center; font-size: 14px; }
+        .footer a { color: #ff6b35; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>Your ASPIR Participant ID</h1>
+        </div>
+        <div class="email-content">
+            <p style="color: #1d1d1f; font-size: 16px;">Hello {{ registration.full_name }},</p>
+            <p style="color: #64748b; font-size: 16px;">Your participant ID for the ASPIR Mentorship Program is below. Please save it for program materials and communications.</p>
+            <div class="id-box">
+                <div class="participant-id">{{ registration.participant_id }}</div>
+            </div>
+            <p style="color: #64748b; font-size: 14px;">If you have any questions, contact us at <a href="mailto:{{ support_email }}" style="color: #0071e3;">{{ support_email }}</a>.</p>
+        </div>
+        <div class="footer">
+            <p style="margin: 0;">© {% now "Y" %} Elevate Tribe Analytics. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -85,3 +85,56 @@ def get_usd_to_ngn_rate_alternative():
         logger.error(f"Error in alternative exchange rate fetch: {str(e)}")
     
     return None
+
+
+def generate_participant_id(registration):
+    """
+    Generate and assign a unique participant ID for a registration.
+    Format: ET/ASPIR/{cohort_code}/{dimension_code}/{sequence}
+    e.g. ET/ASPIR/C1/A/0001 (first cohort, dimension A, first participant).
+    Sequence is per cohort (0001, 0002, ...) so first vs last cohort are
+    differentiated by cohort code (C1, C2, etc.).
+
+    Call when the participant is fully registered (e.g. when payment is complete).
+    Returns the assigned participant_id, or None if cohort/dimension missing.
+    """
+    from .models import Registration
+    from django.db import transaction
+
+    if getattr(registration, 'participant_id', None):
+        return registration.participant_id
+    if not registration.cohort or not registration.dimension:
+        return None
+
+    cohort_code = registration.cohort.code.strip().upper()
+    dimension_code = (registration.dimension.code or '').strip().upper()
+    if not cohort_code or not dimension_code:
+        return None
+
+    # Sequence is per cohort (so first cohort = 1001, 1002...; second cohort = 1001, 1002...)
+    cohort_prefix = f"ET/ASPIR/{cohort_code}/"
+
+    with transaction.atomic():
+        # Lock cohort registrations to avoid duplicate sequence numbers
+        Registration.objects.select_for_update().filter(
+            cohort_id=registration.cohort_id
+        ).exists()
+
+        existing = Registration.objects.filter(
+            participant_id__startswith=cohort_prefix
+        ).exclude(participant_id__isnull=True).exclude(participant_id="")
+
+        next_seq = 1
+        for r in existing:
+            try:
+                part = (r.participant_id or "").split("/")[-1]
+                if part.isdigit():
+                    next_seq = max(next_seq, int(part) + 1)
+            except (ValueError, IndexError):
+                pass
+
+        new_id = f"ET/ASPIR/{cohort_code}/{dimension_code}/{next_seq:04d}"
+        registration.participant_id = new_id
+        registration.save(update_fields=["participant_id"])
+        logger.info(f"Generated participant_id {new_id} for registration {registration.id}")
+        return new_id

@@ -18,11 +18,13 @@ from .models import (
     PricingConfig, ProgramSettings
 )
 from .views import _registration_from_ref
+from .utils import generate_participant_id
 from .emails import (
     send_registration_confirmation_email,
     send_payment_complete_email,
     send_course_fee_payment_email,
     send_staff_payment_notification_email,
+    send_participant_id_email,
 )
 from .admin_forms import (
     AdminEditRegistrationForm, AdminEditCohortForm,
@@ -256,7 +258,7 @@ def export_registrations(request):
     # Header row
     writer.writerow([
         'Name', 'Email', 'Phone', 'Country', 'Age', 'Group', 'Cohort', 'Dimension',
-        'Enrollment Type', 'Amount', 'Currency', 'Status', 'Registration Fee Paid',
+        'Participant ID', 'Enrollment Type', 'Amount', 'Currency', 'Status', 'Registration Fee Paid',
         'Course Fee Paid', 'Reference (Squad)', 'Reference (Paystack)', 'Guardian Name',
         'Guardian Phone', 'Referral Source', 'Created At'
     ])
@@ -270,6 +272,7 @@ def export_registrations(request):
             r.get_group_display() if r.group else '',
             r.cohort.name if r.cohort else '',
             r.dimension.name if r.dimension else (r.dimension_code or ''),
+            r.participant_id or '',
             r.get_enrollment_type_display() if r.enrollment_type else '',
             r.amount or '',
             r.currency or '',
@@ -669,11 +672,13 @@ def admin_reconcile_payment(request):
         # Send appropriate email to the participant
         try:
             if payment_type == 'full_payment' or reference.startswith('ASPIR-FULL-'):
+                generate_participant_id(registration)
                 send_payment_complete_email(registration)
             elif payment_type == 'registration_fee' or reference.startswith('ASPIR-REG-'):
                 send_registration_confirmation_email(registration)
             elif payment_type == 'course_fee' or reference.startswith('ASPIR-COURSE-'):
                 if registration.is_fully_paid():
+                    generate_participant_id(registration)
                     send_payment_complete_email(registration)
                 else:
                     send_course_fee_payment_email(registration)
@@ -759,6 +764,34 @@ def view_registration(request, registration_id):
     }
     
     return render(request, 'registrations/admin/view_registration.html', context)
+
+
+@login_required
+def send_participant_id_email_view(request, registration_id):
+    """
+    Generate participant ID if missing and send it by email to the participant.
+    POST only. Redirects back to view_registration with success or error message.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    if request.method != 'POST':
+        return redirect('view_registration', registration_id=registration_id)
+
+    registration = get_object_or_404(
+        Registration.objects.select_related('cohort', 'dimension'),
+        id=registration_id
+    )
+    had_id_before = bool(registration.participant_id)
+    if send_participant_id_email(registration):
+        msg = 'Participant ID generated and sent' if not had_id_before else 'Participant ID sent'
+        messages.success(request, f'{msg} to {registration.email}.')
+    else:
+        messages.error(
+            request,
+            'Could not send participant ID. Ensure the registration has a cohort and dimension assigned.'
+        )
+    return redirect('view_registration', registration_id=registration_id)
 
 
 @login_required
