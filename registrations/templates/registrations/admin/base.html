@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   {% load static %}
-  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v=15.0" />
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v=16.0" />
   <style>
     /* Force remove yellow and ensure visibility - Comprehensive */
     thead, thead th, thead tr, th {
@@ -54,6 +54,12 @@
     .warning-light {
       background: #f5f5f7 !important;
       color: #1d1d1f !important;
+    }
+    /* Full paid / success badge: always green, never yellow */
+    .badge-success {
+      background: #dcfce7 !important;
+      color: #166534 !important;
+      border-color: rgba(22, 101, 52, 0.25) !important;
     }
     
     /* Settings page specific - remove yellow */
@@ -359,6 +365,19 @@
     }
   </style>
   <link rel="stylesheet" href="{% static 'css/admin-forms.css' %}" />
+  <!-- Force success badges green after any other CSS (no yellow #ffffcf) -->
+  <style>
+    .badge-success,
+    .admin-content .badge-success,
+    .data-table .badge-success,
+    .table-content .badge-success,
+    td .badge-success,
+    span.badge-success {
+      background: #dcfce7 !important;
+      color: #166534 !important;
+      border-color: rgba(22, 101, 52, 0.25) !important;
+    }
+  </style>
   {% block extra_css %}{% endblock %}
 </head>
 <body class="admin-body">

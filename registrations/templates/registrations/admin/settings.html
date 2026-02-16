@@ -36,10 +36,10 @@
                 {{ cohort.code }}
               </span>
             </td>
-            <td>{% if cohort.is_new_intake %}<span class="badge badge-success">New Intake</span>{% else %}<span class="badge">Returning</span>{% endif %}</td>
+            <td>{% if cohort.is_new_intake %}<span class="badge badge-success" style="background:#dcfce7;color:#166534;">New Intake</span>{% else %}<span class="badge">Returning</span>{% endif %}</td>
             <td>
               {% if cohort.is_active %}
-                <span class="badge badge-success">Active</span>
+                <span class="badge badge-success" style="background:#dcfce7;color:#166534;">Active</span>
               {% else %}
                 <span class="badge badge-danger">Inactive</span>
               {% endif %}
@@ -107,7 +107,7 @@
             <td>{{ dimension.display_order }}</td>
             <td>
               {% if dimension.is_active %}
-                <span class="badge badge-success">Active</span>
+                <span class="badge badge-success" style="background:#dcfce7;color:#166534;">Active</span>
               {% else %}
                 <span class="badge badge-danger">Inactive</span>
               {% endif %}
@@ -195,7 +195,7 @@
             </td>
             <td>
               {% if pricing.is_active %}
-                <span class="badge badge-success">Active</span>
+                <span class="badge badge-success" style="background:#dcfce7;color:#166534;">Active</span>
               {% else %}
                 <span class="badge badge-danger">Inactive</span>
               {% endif %}

@@ -1086,10 +1086,11 @@ tbody tr:hover {
   letter-spacing: 0.05em;
 }
 
+/* Readable green - no yellow; explicit hex so it never falls back to yellow */
 .badge-success {
-  background: hsl(var(--admin-success-bg));
-  color: hsl(var(--admin-success));
-  border: 1px solid hsl(var(--admin-success) / 0.2);
+  background: #dcfce7 !important;  /* light green */
+  color: #166534 !important;       /* dark green */
+  border: 1px solid rgba(22, 101, 52, 0.25) !important;
   font-weight: 600;
 }
 
@@ -1102,16 +1103,16 @@ tbody tr:hover {
 }
 
 .badge-accent {
-  background: hsl(var(--admin-accent-bg));
-  color: hsl(var(--admin-accent));
-  border: 1px solid hsl(var(--admin-accent) / 0.2);
+  background: #fff4f0 !important;
+  color: #c2410c !important;
+  border: 1px solid rgba(194, 65, 12, 0.25) !important;
   font-weight: 600;
 }
 
 .badge-danger {
-  background: hsl(var(--admin-danger-bg));
-  color: hsl(var(--admin-danger));
-  border: 1px solid hsl(var(--admin-danger) / 0.2);
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border: 1px solid rgba(185, 28, 28, 0.25) !important;
   font-weight: 600;
 }
 

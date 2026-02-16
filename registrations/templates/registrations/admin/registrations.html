@@ -130,7 +130,7 @@
               {% if registration.status == 'FAILED' %}
                 <span class="badge badge-danger">Failed</span>
               {% elif registration.registration_fee_paid and registration.course_fee_paid %}
-                <span class="badge badge-success">Full paid</span>
+                <span class="badge badge-success" style="background:#dcfce7;color:#166534;border:1px solid rgba(22,101,52,0.25);">Full paid</span>
               {% elif registration.registration_fee_paid %}
                 <span class="badge badge-warning" title="Registration fee paid; course fee pending">Half paid (reg)</span>
               {% elif registration.course_fee_paid %}
