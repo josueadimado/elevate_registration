@@ -792,6 +792,68 @@ def view_registration(request, registration_id):
 
 
 @login_required
+def bulk_generate_participant_ids_view(request):
+    """
+    Generate participant IDs for all registrations that have cohort + dimension but no ID yet.
+    POST only. Redirects back to registrations list with count of generated IDs.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    if request.method != 'POST':
+        return redirect('admin_registrations')
+
+    # Registrations that can get an ID: have cohort and dimension, no participant_id yet
+    from django.db.models import Q
+    without_id = Registration.objects.filter(
+        cohort__isnull=False,
+        dimension__isnull=False,
+    ).filter(Q(participant_id__isnull=True) | Q(participant_id=''))
+    generated = 0
+    for reg in without_id:
+        if generate_participant_id(reg):
+            generated += 1
+    if generated:
+        messages.success(
+            request,
+            f'Generated participant IDs for {generated} registration(s). Their numbers now appear in the list and in Export CSV.'
+        )
+    else:
+        messages.info(request, 'No registrations needed an ID. All with cohort and dimension already have one.')
+    return redirect('admin_registrations')
+
+
+@login_required
+def generate_participant_id_view(request, registration_id):
+    """
+    Generate participant ID only (no email). POST only.
+    Redirects back to view_registration with the new ID in the message.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    if request.method != 'POST':
+        return redirect('view_registration', registration_id=registration_id)
+
+    registration = get_object_or_404(
+        Registration.objects.select_related('cohort', 'dimension'),
+        id=registration_id
+    )
+    if not registration.cohort or not registration.dimension:
+        messages.error(
+            request,
+            'Assign Cohort and Dimension first, then generate the participant ID.'
+        )
+        return redirect('view_registration', registration_id=registration_id)
+    new_id = generate_participant_id(registration)
+    if new_id:
+        messages.success(request, f'Participant ID generated: {new_id}. You can send it by email or export from the list.')
+    else:
+        messages.error(request, 'Could not generate participant ID. Check cohort and dimension.')
+    return redirect('view_registration', registration_id=registration_id)
+
+
+@login_required
 def send_participant_id_email_view(request, registration_id):
     """
     Generate participant ID if missing and send it by email to the participant.
@@ -834,8 +896,13 @@ def edit_registration(request, registration_id):
         form = AdminEditRegistrationForm(request.POST, instance=registration)
         if form.is_valid():
             form.save()
-            messages.success(request, f'Registration for {registration.full_name} has been updated successfully.')
-            return redirect('admin_registrations')
+            # Reload so we see participant_id if it was auto-generated
+            registration.refresh_from_db()
+            msg = f'Registration for {registration.full_name} has been updated.'
+            if registration.participant_id:
+                msg += f' Participant ID: {registration.participant_id}'
+            messages.success(request, msg)
+            return redirect('view_registration', registration_id=registration.id)
         else:
             messages.error(request, 'Please correct the errors below.')
     else:

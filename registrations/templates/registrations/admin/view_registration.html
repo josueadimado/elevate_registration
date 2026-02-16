@@ -49,6 +49,53 @@
       </div>
     </div>
 
+    <!-- Participant ID – prominent at top so it's easy to find and use -->
+    <div class="participant-id-card" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0071e3; border-radius: 16px; padding: 24px; margin-bottom: 32px;">
+      <h3 style="font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
+        <iconify-icon icon="lucide:id-card" style="font-size: 22px; color: #0071e3;"></iconify-icon>
+        Participant ID
+      </h3>
+      {% if registration.participant_id %}
+        <p style="margin: 0 0 12px 0; font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-weight: 700; font-size: 20px; color: #0071e3; letter-spacing: 0.02em;">{{ registration.participant_id }}</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+          <form method="post" action="{% url 'send_participant_id_email' registration.id %}" style="display: inline-block;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;">
+              <iconify-icon icon="lucide:mail"></iconify-icon>
+              Send ID by email
+            </button>
+          </form>
+          <span style="color: #64748b; font-size: 14px;">To export IDs, use <strong>Export CSV</strong> on the Registrations list (includes Participant ID column).</span>
+        </div>
+      {% else %}
+        <p style="margin: 0 0 16px 0; color: #64748b; font-size: 15px;">No participant ID yet. Generate it below, or it will be created when you save the registration in Edit (if Cohort and Dimension are set).</p>
+        {% if registration.cohort and registration.dimension %}
+          <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+            <form method="post" action="{% url 'generate_participant_id' registration.id %}" style="display: inline-block;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;">
+                <iconify-icon icon="lucide:hash"></iconify-icon>
+                Generate ID
+              </button>
+            </form>
+            <form method="post" action="{% url 'send_participant_id_email' registration.id %}" style="display: inline-block;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;">
+                <iconify-icon icon="lucide:mail"></iconify-icon>
+                Generate ID and send by email
+              </button>
+            </form>
+          </div>
+        {% else %}
+          <p style="margin: 0; color: #64748b; font-size: 14px;">Assign <strong>Cohort</strong> and <strong>Dimension</strong> in Edit, then save. The ID will be generated automatically, or use the buttons above.</p>
+          <a href="{% url 'edit_registration' registration.id %}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; margin-top: 12px;">
+            <iconify-icon icon="lucide:edit"></iconify-icon>
+            Edit registration
+          </a>
+        {% endif %}
+      {% endif %}
+    </div>
+
     <div class="view-details-container">
       <!-- Student Information -->
       <fieldset class="form-fieldset">

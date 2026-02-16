@@ -53,6 +53,13 @@
     <div class="table-header">
       <h2 class="table-title">All Registrations ({{ page_obj.paginator.count }})</h2>
       <div class="table-header-actions">
+        <form method="post" action="{% url 'bulk_generate_participant_ids' %}" style="display: inline-block;" onsubmit="return confirm('Generate participant IDs for everyone who has Cohort and Dimension but no ID yet?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-secondary btn-sm" title="Generate IDs for existing registrations that don't have one yet">
+            <iconify-icon icon="lucide:hash"></iconify-icon>
+            Generate missing IDs
+          </button>
+        </form>
         <a href="{% url 'download_registrations_template' %}" class="btn btn-secondary btn-sm" title="Download template to fill and import registrations">
           <iconify-icon icon="lucide:file-down"></iconify-icon>
           Template
