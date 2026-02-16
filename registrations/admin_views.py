@@ -358,7 +358,9 @@ def _resolve_dimension(dim_value):
 @login_required
 def import_registrations(request):
     """
-    Upload a CSV file to create registrations manually (for clients who cannot pay online).
+    Upload a CSV file to create or update registrations (e.g. offline sign-ups).
+    Rows are matched by email (case-insensitive): if a registration with that email
+    exists, it is updated; otherwise a new registration is created.
     CSV must have headers matching REGISTRATION_CSV_HEADERS.
     """
     if not request.user.is_staff:
@@ -382,6 +384,7 @@ def import_registrations(request):
 
         reader = csv.DictReader(io.StringIO(content))
         created = 0
+        updated = 0
         errors = []
         for row_num, row in enumerate(reader, start=2):
             if not row:
@@ -437,31 +440,48 @@ def import_registrations(request):
                 except PricingConfig.DoesNotExist:
                     amount = 150.00 if enrollment_type == 'NEW' else 120.00
 
-            if Registration.objects.filter(email__iexact=email).exists():
-                errors.append(f'Row {row_num}: a registration with email "{email}" already exists.')
-                continue
-
+            # Match by email (case-insensitive): update if exists, otherwise create
+            existing = Registration.objects.filter(email__iexact=email).first()
             try:
-                Registration.objects.create(
-                    full_name=full_name,
-                    email=email,
-                    phone=phone,
-                    country=country,
-                    age=age,
-                    group=group,
-                    cohort=cohort,
-                    dimension=dimension,
-                    cohort_code=cohort.code,
-                    dimension_code=dimension.code,
-                    enrollment_type=enrollment_type,
-                    amount=amount,
-                    currency=currency,
-                    status='PENDING',
-                    guardian_name=guardian_name,
-                    guardian_phone=guardian_phone,
-                    referral_source=referral_source,
-                )
-                created += 1
+                if existing:
+                    existing.full_name = full_name
+                    existing.phone = phone
+                    existing.country = country
+                    existing.age = age
+                    existing.group = group
+                    existing.cohort = cohort
+                    existing.dimension = dimension
+                    existing.cohort_code = cohort.code
+                    existing.dimension_code = dimension.code
+                    existing.enrollment_type = enrollment_type
+                    existing.amount = amount
+                    existing.currency = currency
+                    existing.guardian_name = guardian_name
+                    existing.guardian_phone = guardian_phone
+                    existing.referral_source = referral_source
+                    existing.save()
+                    updated += 1
+                else:
+                    Registration.objects.create(
+                        full_name=full_name,
+                        email=email,
+                        phone=phone,
+                        country=country,
+                        age=age,
+                        group=group,
+                        cohort=cohort,
+                        dimension=dimension,
+                        cohort_code=cohort.code,
+                        dimension_code=dimension.code,
+                        enrollment_type=enrollment_type,
+                        amount=amount,
+                        currency=currency,
+                        status='PENDING',
+                        guardian_name=guardian_name,
+                        guardian_phone=guardian_phone,
+                        referral_source=referral_source,
+                    )
+                    created += 1
             except Exception as e:
                 errors.append(f'Row {row_num}: {str(e)}')
 
@@ -470,9 +490,14 @@ def import_registrations(request):
                 messages.error(request, err)
             if len(errors) > 20:
                 messages.error(request, f'... and {len(errors) - 20} more errors.')
-        if created:
-            messages.success(request, f'{created} registration(s) created successfully. They can pay later or you can reconcile payments.')
-        if created == 0 and not errors:
+        if created or updated:
+            parts = []
+            if created:
+                parts.append(f'{created} created')
+            if updated:
+                parts.append(f'{updated} updated')
+            messages.success(request, f'Import complete: {", ".join(parts)}. You can mark offline payments as full/half in Edit Registration.')
+        if created == 0 and updated == 0 and not errors:
             messages.warning(request, 'No rows were imported. Check that the CSV has a header row and data rows with full_name and email.')
         return redirect('admin_registrations')
 

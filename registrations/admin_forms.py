@@ -16,7 +16,9 @@ class AdminEditRegistrationForm(forms.ModelForm):
             'full_name', 'email', 'phone', 'country', 'age',
             'group', 'cohort', 'dimension', 'enrollment_type',
             'guardian_name', 'guardian_phone', 'referral_source',
-            'amount', 'currency', 'status', 'squad_reference', 'paystack_reference'
+            'amount', 'currency', 'status', 'squad_reference', 'paystack_reference',
+            'registration_fee_paid', 'course_fee_paid',
+            'registration_fee_amount', 'course_fee_amount',
         ]
         widgets = {
             'full_name': forms.TextInput(attrs={
@@ -81,8 +83,35 @@ class AdminEditRegistrationForm(forms.ModelForm):
                 'class': 'admin-form-input',
                 'readonly': True
             }),
+            'registration_fee_paid': forms.CheckboxInput(attrs={
+                'class': 'admin-form-checkbox',
+            }),
+            'course_fee_paid': forms.CheckboxInput(attrs={
+                'class': 'admin-form-checkbox',
+            }),
+            'registration_fee_amount': forms.NumberInput(attrs={
+                'class': 'admin-form-input',
+                'step': '0.01',
+                'placeholder': 'e.g. 50.00',
+            }),
+            'course_fee_amount': forms.NumberInput(attrs={
+                'class': 'admin-form-input',
+                'step': '0.01',
+                'placeholder': 'e.g. 100.00',
+            }),
         }
-    
+
+    def save(self, commit=True):
+        # Keep status in sync with fee checkboxes (for offline payments)
+        instance = super().save(commit=False)
+        if instance.registration_fee_paid and instance.course_fee_paid:
+            instance.status = 'PAID'
+        elif instance.registration_fee_paid or instance.course_fee_paid:
+            instance.status = 'PENDING'
+        if commit:
+            instance.save()
+        return instance
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Set querysets for ForeignKey fields

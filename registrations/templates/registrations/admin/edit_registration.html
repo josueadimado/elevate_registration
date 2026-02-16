@@ -191,6 +191,38 @@
               <div class="form-error">{{ form.status.errors }}</div>
             {% endif %}
           </div>
+
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">For <strong>offline payments</strong>, check the boxes below to mark as full or half paid.</p>
+          </div>
+          <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+            <label for="{{ form.registration_fee_paid.id_for_label }}" style="margin: 0; font-weight: 600;">{{ form.registration_fee_paid.label }}</label>
+            {{ form.registration_fee_paid }}
+            {% if form.registration_fee_paid.errors %}
+              <div class="form-error">{{ form.registration_fee_paid.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.registration_fee_amount.id_for_label }}">{{ form.registration_fee_amount.label }} (optional)</label>
+            {{ form.registration_fee_amount }}
+            {% if form.registration_fee_amount.errors %}
+              <div class="form-error">{{ form.registration_fee_amount.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+            <label for="{{ form.course_fee_paid.id_for_label }}" style="margin: 0; font-weight: 600;">{{ form.course_fee_paid.label }}</label>
+            {{ form.course_fee_paid }}
+            {% if form.course_fee_paid.errors %}
+              <div class="form-error">{{ form.course_fee_paid.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.course_fee_amount.id_for_label }}">{{ form.course_fee_amount.label }} (optional)</label>
+            {{ form.course_fee_amount }}
+            {% if form.course_fee_amount.errors %}
+              <div class="form-error">{{ form.course_fee_amount.errors }}</div>
+            {% endif %}
+          </div>
           
           <div class="form-group">
             <label for="{{ form.squad_reference.id_for_label }}">{{ form.squad_reference.label }}</label>
