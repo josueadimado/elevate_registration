@@ -1,0 +1,49 @@
+{% extends 'registrations/admin/base.html' %}
+{% load static %}
+
+{% block page_title %}Update participant IDs from file{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+  <div style="max-width: 640px; margin: 0 auto;">
+    <h2 class="table-title" style="margin-bottom: 8px;">Update participant IDs from file</h2>
+    <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+      Use this when you receive an official list of participant IDs (e.g. &quot;New Elevate Tribe ID #s&quot;). Upload a CSV or Excel file with <strong>Name</strong> and <strong>Participant ID</strong>. The system will match each name to a registration and set their participant ID and cohort. Names are matched to your current registrations (e.g. from Export CSV).
+    </p>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px;">
+      <a href="{% url 'admin_registrations' %}" class="btn btn-outline" style="border: 1px solid #d2d2d7; color: #1d1d1f;">
+        Back to Registrations
+      </a>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px; font-size: 13px; color: #475569;">
+      <strong style="color: #1d1d1f;">File format</strong>
+      <ul style="margin: 8px 0 0 16px;">
+        <li><strong>CSV:</strong> Header row with &quot;Name&quot; and &quot;Participant ID&quot; (or &quot;ID&quot;), then one row per person.</li>
+        <li><strong>Excel (.xlsx):</strong> First sheet: column A = Name, column B = Participant ID. If the first row looks like headers (Name / Participant ID), it will be skipped.</li>
+      </ul>
+      <p style="margin: 12px 0 0 0;">Participant ID format: <code>ET/ASPIR/C1/003</code> (cohort C1 or C2, then 3-digit sequence: 001, 002, 003, …). Cohort is taken from the ID and set on the registration; IDs are stored in this canonical form.</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" style="background: hsl(var(--admin-card)); border: 1px solid hsl(var(--admin-border)); border-radius: 12px; padding: 24px;">
+      {% csrf_token %}
+      <label style="display: block; font-weight: 600; margin-bottom: 8px;">Choose CSV or Excel file</label>
+      <input
+        type="file"
+        name="id_file"
+        accept=".csv,.xlsx,.xls"
+        required
+        style="width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 14px;"
+      >
+      <div style="margin-top: 20px; display: flex; gap: 12px;">
+        <button type="submit" class="btn btn-primary">
+          <iconify-icon icon="lucide:upload"></iconify-icon>
+          Upload and update IDs
+        </button>
+        <a href="{% url 'admin_registrations' %}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

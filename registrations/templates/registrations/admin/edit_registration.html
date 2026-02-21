@@ -23,7 +23,7 @@
       </a>
     </div>
 
-    <!-- Participant ID – auto-generated on Save if cohort+dimension set; or use buttons -->
+    <!-- Participant ID – auto-generated on Save if cohort set; or use buttons (format: ET/ASPIR/C1/0001) -->
     {% if registration %}
     <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0071e3; border-radius: 16px; padding: 20px; margin-bottom: 24px;">
       <h3 style="font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 0 0 10px 0;">
@@ -37,8 +37,8 @@
           <button type="submit" class="btn btn-secondary btn-sm">Send ID by email</button>
         </form>
       {% else %}
-        <p style="margin: 0 0 12px 0; color: #64748b;">Not assigned. <strong>Save this form</strong> (with Cohort and Dimension set) to generate it automatically, or use the buttons below.</p>
-        {% if registration.cohort and registration.dimension %}
+        <p style="margin: 0 0 12px 0; color: #64748b;">Not assigned. <strong>Save this form</strong> (with Cohort set) to generate it automatically, or use the buttons below.</p>
+        {% if registration.cohort %}
           <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             <form method="post" action="{% url 'generate_participant_id' registration.id %}" style="display: inline-block;">
               {% csrf_token %}
@@ -50,7 +50,7 @@
             </form>
           </div>
         {% else %}
-          <p style="margin: 0; color: #64748b; font-size: 14px;">Set <strong>Cohort</strong> and <strong>Dimension</strong> above, then click Save — the ID will be created automatically.</p>
+          <p style="margin: 0; color: #64748b; font-size: 14px;">Set <strong>Cohort</strong> above, then click Save — the ID will be created automatically (e.g. ET/ASPIR/C1/0001).</p>
         {% endif %}
       {% endif %}
     </div>

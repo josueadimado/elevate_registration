@@ -220,12 +220,12 @@ def send_participant_id_email(registration):
     """
     Send an email to the participant with their ASPIR participant ID.
     Use when generating/sending ID to existing registrations (e.g. from admin).
-    Generates the ID if missing (when cohort and dimension are set).
+    Generates the ID if missing (when cohort is set).
     """
     from .utils import generate_participant_id
 
-    # Ensure ID exists (generate if possible)
-    if not getattr(registration, 'participant_id', None) and registration.cohort and registration.dimension:
+    # Ensure ID exists (generate if possible; only cohort is required)
+    if not getattr(registration, 'participant_id', None) and registration.cohort:
         generate_participant_id(registration)
 
     if not registration.participant_id:

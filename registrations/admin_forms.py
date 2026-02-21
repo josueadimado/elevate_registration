@@ -110,8 +110,8 @@ class AdminEditRegistrationForm(forms.ModelForm):
             instance.status = 'PENDING'
         if commit:
             instance.save()
-            # Auto-generate participant ID when cohort + dimension are set and ID is missing
-            if instance.cohort and instance.dimension and not instance.participant_id:
+            # Auto-generate participant ID when cohort is set and ID is missing (dimension not in ID)
+            if instance.cohort and not instance.participant_id:
                 from .utils import generate_participant_id
                 generate_participant_id(instance)
         return instance

@@ -87,35 +87,78 @@ def get_usd_to_ngn_rate_alternative():
     return None
 
 
+# Canonical participant ID format: ET/ASPIR/{cohort}/NNN (e.g. ET/ASPIR/C1/003)
+# Cohort is C1 or C2; sequence is exactly 3 digits: 001, 002, 003, ...
+PARTICIPANT_ID_FORMAT = "ET/ASPIR/{cohort}/{seq:03d}"
+
+
+def format_participant_id_canonical(cohort_code, sequence):
+    """
+    Return participant ID in canonical form: ET/ASPIR/C1/003.
+    cohort_code: e.g. C1, C2 (will be uppercased).
+    sequence: integer (1, 2, 3, ...); will be zero-padded to 3 digits.
+    """
+    c = str(cohort_code).strip().upper()
+    try:
+        seq = int(sequence)
+    except (TypeError, ValueError):
+        seq = 1
+    return f"ET/ASPIR/{c}/{seq:03d}"
+
+
+def parse_participant_id_to_canonical(participant_id):
+    """
+    Parse a participant_id string (from file or DB) into canonical form ET/ASPIR/C1/003.
+    Accepts ET/ASPIR/C1/003, ET/ASPIR/C1/3, ET/ASPIR/C1/0001, etc.
+    Returns canonical string or None if invalid.
+    """
+    if not participant_id or not isinstance(participant_id, str):
+        return None
+    # Normalize slashes
+    s = participant_id.strip().replace("\\", "/").replace("／", "/")
+    parts = [p.strip() for p in s.split("/") if p.strip()]
+    if len(parts) < 3:
+        return None
+    # Find cohort (C1 or C2) and the numeric segment
+    cohort_code = None
+    seq_num = None
+    for i, p in enumerate(parts):
+        if p.upper() in ("C1", "C2"):
+            cohort_code = p.upper()
+            # Next part after cohort is usually the sequence (or there might be dimension in old format)
+            for j in range(i + 1, len(parts)):
+                if parts[j].isdigit():
+                    seq_num = int(parts[j])
+                    break
+            break
+    if not cohort_code or seq_num is None:
+        return None
+    return format_participant_id_canonical(cohort_code, seq_num)
+
+
 def generate_participant_id(registration):
     """
     Generate and assign a unique participant ID for a registration.
-    Format: ET/ASPIR/{cohort_code}/{dimension_code}/{sequence}
-    e.g. ET/ASPIR/C1/A/0001 (first cohort, dimension A, first participant).
-    Sequence is per cohort (0001, 0002, ...) so first vs last cohort are
-    differentiated by cohort code (C1, C2, etc.).
+    Format: ET/ASPIR/{cohort_code}/{sequence} with 3-digit sequence: 001, 002, 003, ...
 
     Call when the participant is fully registered (e.g. when payment is complete).
-    Returns the assigned participant_id, or None if cohort/dimension missing.
+    Returns the assigned participant_id, or None if cohort missing.
     """
     from .models import Registration
     from django.db import transaction
 
     if getattr(registration, 'participant_id', None):
         return registration.participant_id
-    if not registration.cohort or not registration.dimension:
+    if not registration.cohort:
         return None
 
     cohort_code = registration.cohort.code.strip().upper()
-    dimension_code = (registration.dimension.code or '').strip().upper()
-    if not cohort_code or not dimension_code:
+    if not cohort_code:
         return None
 
-    # Sequence is per cohort (so first cohort = 1001, 1002...; second cohort = 1001, 1002...)
     cohort_prefix = f"ET/ASPIR/{cohort_code}/"
 
     with transaction.atomic():
-        # Lock cohort registrations to avoid duplicate sequence numbers
         Registration.objects.select_for_update().filter(
             cohort_id=registration.cohort_id
         ).exists()
@@ -133,7 +176,7 @@ def generate_participant_id(registration):
             except (ValueError, IndexError):
                 pass
 
-        new_id = f"ET/ASPIR/{cohort_code}/{dimension_code}/{next_seq:04d}"
+        new_id = format_participant_id_canonical(cohort_code, next_seq)
         registration.participant_id = new_id
         registration.save(update_fields=["participant_id"])
         logger.info(f"Generated participant_id {new_id} for registration {registration.id}")

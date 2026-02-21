@@ -68,6 +68,10 @@
           <iconify-icon icon="lucide:upload"></iconify-icon>
           Import CSV
         </a>
+        <a href="{% url 'admin_update_participant_ids_from_file' %}" class="btn btn-secondary btn-sm" title="Apply participant IDs from an official list (CSV or Excel)">
+          <iconify-icon icon="lucide:file-input"></iconify-icon>
+          Update IDs from file
+        </a>
         <a href="{% url 'export_registrations' %}?{{ request.GET.urlencode }}" class="btn btn-secondary btn-sm" title="Export current list as CSV">
           <iconify-icon icon="lucide:download"></iconify-icon>
           Export CSV

@@ -12,6 +12,7 @@ urlpatterns = [
     path('registrations/bulk-generate-ids/', admin_views.bulk_generate_participant_ids_view, name='bulk_generate_participant_ids'),
     path('registrations/export/', admin_views.export_registrations, name='export_registrations'),
     path('registrations/import/', admin_views.import_registrations, name='admin_import_registrations'),
+    path('registrations/update-ids-from-file/', admin_views.update_participant_ids_from_file, name='admin_update_participant_ids_from_file'),
     path('registrations/template/', admin_views.download_registrations_template, name='download_registrations_template'),
     path('registrations/add/', admin_views.add_registration, name='add_registration'),
     path('registrations/<uuid:registration_id>/', admin_views.view_registration, name='view_registration'),

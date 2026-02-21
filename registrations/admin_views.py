@@ -18,7 +18,7 @@ from .models import (
     PricingConfig, ProgramSettings
 )
 from .views import _registration_from_ref
-from .utils import generate_participant_id
+from .utils import generate_participant_id, parse_participant_id_to_canonical
 from .emails import (
     send_registration_confirmation_email,
     send_payment_complete_email,
@@ -331,6 +331,84 @@ def download_registrations_template(request):
     return response
 
 
+def _normalize_name(s):
+    """Normalize name for matching: strip, collapse spaces, lower."""
+    if not s or not isinstance(s, str):
+        return ''
+    return ' '.join(s.strip().split()).lower()
+
+
+def _normalize_participant_id(raw_id):
+    """
+    Normalize participant ID from file: ensure string, strip, unify slashes and spaces.
+    Excel may use backslash, full-width slash, or extra spaces. Returns normalized string or ''.
+    """
+    if raw_id is None:
+        return ''
+    s = str(raw_id).strip()
+    if not s:
+        return ''
+    # Unify path-like separators to /
+    for char in ('\\', '／', '∕', '\u2044'):
+        s = s.replace(char, '/')
+    # Collapse multiple slashes and trim
+    s = '/'.join(p.strip() for p in s.split('/') if p.strip())
+    return s
+
+
+def _looks_like_participant_id(val):
+    """True if string looks like ET/ASPIR/C1/003 or C1/003 style ID."""
+    if val is None:
+        return False
+    s = _normalize_participant_id(val)
+    if not s:
+        return False
+    parts = [p.strip().upper() for p in s.split('/') if p.strip()]
+    if not parts:
+        return False
+    if 'ET' in parts and 'ASPIR' in parts:
+        return True
+    if any(p in ('C1', 'C2') for p in parts):
+        return True
+    return False
+
+
+def _looks_like_name(val):
+    """True if string looks like a person name (letters, spaces, maybe hyphen/apostrophe)."""
+    if not val or not isinstance(val, str):
+        return False
+    s = str(val).strip()
+    if len(s) < 2:
+        return False
+    # Should not be mostly digits or contain ET/ASPIR
+    if 'ET' in s.upper() and 'ASPIR' in s.upper():
+        return False
+    if s.replace(' ', '').replace('-', '').replace("'", '').replace('.', '').isnumeric():
+        return False
+    # Allow letters, spaces, hyphen, apostrophe, period
+    allowed = set(' abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-\'.')
+    return all(c in allowed for c in s)
+
+
+def _extract_cohort_code_from_participant_id(participant_id):
+    """
+    Extract cohort code from participant_id string.
+    e.g. ET/ASPIR/C1/003 -> C1, ET/ASPIR/C2/001 -> C2, ET/ASPIR/C1/S/0016 -> C1.
+    Accepts normalized or raw ID (slashes unified by _normalize_participant_id).
+    Returns None if not in expected format.
+    """
+    if not participant_id:
+        return None
+    s = _normalize_participant_id(participant_id)
+    if not s:
+        return None
+    parts = s.split('/')
+    for p in parts:
+        if p and p.upper() in ('C1', 'C2'):
+            return p.upper()
+    return None
+
+
 def _resolve_cohort(cohort_value):
     """Resolve cohort from CSV value: C1, C2, or cohort name. Returns Cohort or None."""
     if not cohort_value or not str(cohort_value).strip():
@@ -502,6 +580,214 @@ def import_registrations(request):
         return redirect('admin_registrations')
 
     return render(request, 'registrations/admin/import_registrations.html', {})
+
+
+def _parse_id_file_rows(uploaded):
+    """
+    Parse CSV or Excel file into list of dicts with keys 'name', 'participant_id'.
+    CSV: expects headers 'Name' and 'Participant ID' (or 'ID').
+    Excel: first sheet; column A = name, B = participant ID; or use first row as headers if it looks like headers.
+    """
+    name_key = None
+    id_key = None
+    rows = []
+
+    if uploaded.name.lower().endswith('.csv'):
+        try:
+            content = uploaded.read().decode('utf-8-sig').strip()
+        except UnicodeDecodeError:
+            content = uploaded.read().decode('latin-1').strip()
+        reader = csv.DictReader(io.StringIO(content))
+        for row in reader:
+            row = {k.strip(): v for k, v in row.items() if k}
+            if name_key is None:
+                for k in row:
+                    if k and 'name' in k.lower():
+                        name_key = k
+                    if k and ('participant' in k.lower() or k.lower() == 'id'):
+                        id_key = k
+                if not name_key:
+                    name_key = 'Name'
+                if not id_key:
+                    id_key = 'Participant ID'
+            name = (row.get(name_key) or '').strip()
+            pid = _normalize_participant_id(row.get(id_key))
+            if name or pid:
+                rows.append({'name': name, 'participant_id': pid})
+        return rows
+
+    if uploaded.name.lower().endswith(('.xlsx', '.xls')):
+        try:
+            import openpyxl
+        except ImportError:
+            return None  # caller will show "install openpyxl" message
+        uploaded.seek(0)
+        wb = openpyxl.load_workbook(uploaded, read_only=True, data_only=True)
+        ws = wb.active
+        data = list(ws.iter_rows(values_only=True))
+        wb.close()
+        if not data:
+            return []
+        # Convert first row to strings for header detection
+        first = []
+        for c in data[0]:
+            if c is None:
+                first.append('')
+            elif isinstance(c, float) and c == int(c):
+                first.append(str(int(c)))
+            else:
+                first.append(str(c).strip())
+        # Check if first row looks like headers
+        if first[0] and 'name' in first[0].lower() and (len(first) < 2 or 'participant' in (first[1] or '').lower() or (first[1] or '').strip().upper() == 'ID'):
+            # Header row
+            name_col = 0
+            id_col = 1 if len(first) > 1 else 0
+            for i, cell in enumerate(first):
+                if cell and 'name' in cell.lower():
+                    name_col = i
+                if cell and ('participant' in cell.lower() or cell.strip().upper() == 'ID'):
+                    id_col = i
+            for row in data[1:]:
+                row = list(row) if row else []
+                name = (row[name_col] if name_col < len(row) else None) or ''
+                name = str(name).strip()
+                raw_pid = row[id_col] if id_col < len(row) else None
+                pid = _normalize_participant_id(raw_pid)
+                if name or pid:
+                    rows.append({'name': name, 'participant_id': pid})
+        else:
+            # No header: detect column order from first data row (or first row)
+            name_col, id_col = 0, 1
+            if len(data) > 0:
+                r0 = list(data[0]) if data[0] else []
+                c0 = (r0[0] if len(r0) > 0 else None)
+                c1 = (r0[1] if len(r0) > 1 else None)
+                str0 = str(c0).strip() if c0 is not None else ''
+                str1 = str(c1).strip() if c1 is not None else ''
+                if _looks_like_participant_id(str0) and _looks_like_name(str1):
+                    id_col, name_col = 0, 1
+                elif _looks_like_name(str0) and _looks_like_participant_id(str1):
+                    name_col, id_col = 0, 1
+            for row in data:
+                row = list(row) if row else []
+                name = (row[name_col] if name_col < len(row) else None) or ''
+                name = str(name).strip()
+                raw_pid = row[id_col] if id_col < len(row) else None
+                pid = _normalize_participant_id(raw_pid)
+                if name or pid:
+                    rows.append({'name': name, 'participant_id': pid})
+        return rows
+
+    return None
+
+
+@login_required
+def update_participant_ids_from_file(request):
+    """
+    Upload a file (CSV or Excel) with columns Name and Participant ID (e.g. from "New Elevate Tribe ID #s").
+    Matches rows to registrations by name and optionally cohort from the ID; updates participant_id and cohort.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+
+    if request.method == 'POST' and request.FILES.get('id_file'):
+        uploaded = request.FILES['id_file']
+        if not uploaded.name.lower().endswith(('.csv', '.xlsx', '.xls')):
+            messages.error(request, 'Please upload a CSV or Excel (.xlsx) file.')
+            return redirect('admin_update_participant_ids_from_file')
+
+        rows = _parse_id_file_rows(uploaded)
+        if rows is None:
+            messages.error(request, 'Excel support requires openpyxl. Install it with: pip install openpyxl')
+            return redirect('admin_update_participant_ids_from_file')
+        if not rows:
+            messages.warning(request, 'No rows found in the file. CSV needs headers "Name" and "Participant ID".')
+            return redirect('admin_update_participant_ids_from_file')
+
+        updated_count = 0
+        skipped_no_match = []
+        skipped_multiple = []
+        skipped_invalid_id = []
+        errors = []
+
+        for item in rows:
+            name = item.get('name') or ''
+            participant_id = _normalize_participant_id(item.get('participant_id'))
+            if not participant_id:
+                continue
+            # Skip rows where ID doesn't look like ET/ASPIR/C1/003 (e.g. Excel gave us just a number)
+            if not _looks_like_participant_id(participant_id):
+                skipped_invalid_id.append(f'{name or "(no name)"}: "{participant_id}"')
+                continue
+            cohort_code = _extract_cohort_code_from_participant_id(participant_id)
+            cohort = _resolve_cohort(cohort_code) if cohort_code else None
+
+            norm_name = _normalize_name(name)
+            if not norm_name:
+                continue
+
+            # Find registration(s) with matching name (exact normalized match)
+            candidates = list(
+                Registration.objects.filter(
+                    full_name__iexact=name
+                ).select_related('cohort')
+            )
+            if not candidates:
+                # Try normalized: registration full_name normalized equals norm_name
+                all_regs = Registration.objects.all().select_related('cohort')
+                candidates = [r for r in all_regs if _normalize_name(r.full_name) == norm_name]
+            if not candidates:
+                # Fallback: registration full_name contains name or name in full_name (e.g. "Nana Ama Kwartemah" vs "Nana Ama Kwartemah Agyei")
+                all_regs = Registration.objects.all().select_related('cohort')
+                candidates = [r for r in all_regs if (
+                    norm_name in _normalize_name(r.full_name) or _normalize_name(r.full_name) in norm_name
+                )]
+
+            if not candidates:
+                skipped_no_match.append(name)
+                continue
+            if len(candidates) > 1 and cohort:
+                candidates = [r for r in candidates if r.cohort and r.cohort.code == cohort_code]
+            if len(candidates) > 1:
+                skipped_multiple.append(name)
+                continue
+            reg = candidates[0]
+            # Store in canonical form: ET/ASPIR/C1/003 (3-digit sequence)
+            canonical_id = parse_participant_id_to_canonical(participant_id)
+            reg.participant_id = canonical_id if canonical_id else participant_id
+            if cohort:
+                reg.cohort = cohort
+                reg.cohort_code = cohort.code
+            reg.save(update_fields=['participant_id', 'cohort', 'cohort_code', 'updated_at'])
+            updated_count += 1
+
+        if updated_count:
+            messages.success(request, f'Updated participant ID and cohort for {updated_count} registration(s).')
+        if skipped_no_match:
+            messages.warning(
+                request,
+                f'No match in registrations for: {", ".join(skipped_no_match[:15])}' +
+                (f' ... and {len(skipped_no_match) - 15} more' if len(skipped_no_match) > 15 else '')
+            )
+        if skipped_multiple:
+            messages.warning(
+                request,
+                f'Multiple registrations with same name (could not pick one): {", ".join(skipped_multiple[:10])}' +
+                (f' ... and {len(skipped_multiple) - 10} more' if len(skipped_multiple) > 10 else '')
+            )
+        if skipped_invalid_id:
+            messages.warning(
+                request,
+                f'Unrecognized ID format (expected e.g. ET/ASPIR/C1/003): {"; ".join(skipped_invalid_id[:5])}' +
+                (f' ... and {len(skipped_invalid_id) - 5} more' if len(skipped_invalid_id) > 5 else '')
+            )
+        if errors:
+            for err in errors[:10]:
+                messages.error(request, err)
+        return redirect('admin_registrations')
+
+    return render(request, 'registrations/admin/update_participant_ids_from_file.html', {})
 
 
 @login_required
@@ -794,7 +1080,7 @@ def view_registration(request, registration_id):
 @login_required
 def bulk_generate_participant_ids_view(request):
     """
-    Generate participant IDs for all registrations that have cohort + dimension but no ID yet.
+    Generate participant IDs for all registrations that have a cohort but no ID yet.
     POST only. Redirects back to registrations list with count of generated IDs.
     """
     if not request.user.is_staff:
@@ -803,11 +1089,10 @@ def bulk_generate_participant_ids_view(request):
     if request.method != 'POST':
         return redirect('admin_registrations')
 
-    # Registrations that can get an ID: have cohort and dimension, no participant_id yet
+    # Registrations that can get an ID: have cohort, no participant_id yet (dimension not required for ID)
     from django.db.models import Q
     without_id = Registration.objects.filter(
         cohort__isnull=False,
-        dimension__isnull=False,
     ).filter(Q(participant_id__isnull=True) | Q(participant_id=''))
     generated = 0
     for reg in without_id:
@@ -819,7 +1104,7 @@ def bulk_generate_participant_ids_view(request):
             f'Generated participant IDs for {generated} registration(s). Their numbers now appear in the list and in Export CSV.'
         )
     else:
-        messages.info(request, 'No registrations needed an ID. All with cohort and dimension already have one.')
+        messages.info(request, 'No registrations needed an ID. All with a cohort already have one.')
     return redirect('admin_registrations')
 
 
@@ -839,17 +1124,17 @@ def generate_participant_id_view(request, registration_id):
         Registration.objects.select_related('cohort', 'dimension'),
         id=registration_id
     )
-    if not registration.cohort or not registration.dimension:
+    if not registration.cohort:
         messages.error(
             request,
-            'Assign Cohort and Dimension first, then generate the participant ID.'
+            'Assign a Cohort first, then generate the participant ID.'
         )
         return redirect('view_registration', registration_id=registration_id)
     new_id = generate_participant_id(registration)
     if new_id:
         messages.success(request, f'Participant ID generated: {new_id}. You can send it by email or export from the list.')
     else:
-        messages.error(request, 'Could not generate participant ID. Check cohort and dimension.')
+        messages.error(request, 'Could not generate participant ID. Check that a cohort is assigned.')
     return redirect('view_registration', registration_id=registration_id)
 
 
@@ -876,7 +1161,7 @@ def send_participant_id_email_view(request, registration_id):
     else:
         messages.error(
             request,
-            'Could not send participant ID. Ensure the registration has a cohort and dimension assigned.'
+            'Could not send participant ID. Ensure the registration has a cohort assigned.'
         )
     return redirect('view_registration', registration_id=registration_id)
 
