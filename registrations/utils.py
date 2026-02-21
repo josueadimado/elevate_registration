@@ -106,6 +106,28 @@ def format_participant_id_canonical(cohort_code, sequence):
     return f"ET/ASPIR/{c}/{seq:03d}"
 
 
+def get_next_available_sequence(cohort_code):
+    """
+    Return the next available sequence number (integer) for participant IDs
+    in the given cohort (e.g. C1, C2). Used when normalizing IDs to avoid duplicates.
+    """
+    from .models import Registration
+    c = str(cohort_code).strip().upper()
+    prefix = f"ET/ASPIR/{c}/"
+    existing = Registration.objects.filter(
+        participant_id__startswith=prefix
+    ).exclude(participant_id__isnull=True).exclude(participant_id="")
+    next_seq = 1
+    for r in existing:
+        try:
+            part = (r.participant_id or "").split("/")[-1]
+            if part.isdigit():
+                next_seq = max(next_seq, int(part) + 1)
+        except (ValueError, IndexError):
+            pass
+    return next_seq
+
+
 def parse_participant_id_to_canonical(participant_id):
     """
     Parse a participant_id string (from file or DB) into canonical form ET/ASPIR/C1/003.
