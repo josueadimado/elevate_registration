@@ -5,11 +5,11 @@
 
 {% block content %}
 <div class="fade-in-up">
-  <!-- Payment summary: X pending, X half paid, X full paid -->
+  <!-- Payment summary: clearer pills -->
   <div class="payment-summary-bar">
-    <span class="summary-item summary-pending"><strong>{{ count_pending }}</strong> pending payment</span>
-    <span class="summary-item summary-half"><strong>{{ count_half_paid }}</strong> half payment</span>
-    <span class="summary-item summary-full"><strong>{{ count_full_paid }}</strong> full payment</span>
+    <span class="summary-item summary-pending"><strong>{{ count_pending }}</strong> pending</span>
+    <span class="summary-item summary-half"><strong>{{ count_half_paid }}</strong> half paid</span>
+    <span class="summary-item summary-full"><strong>{{ count_full_paid }}</strong> full paid</span>
     {% if count_failed %}<span class="summary-item summary-failed"><strong>{{ count_failed }}</strong> failed</span>{% endif %}
   </div>
   <!-- Filters -->
@@ -44,48 +44,45 @@
       </option>
       {% endfor %}
     </select>
-    <button type="submit" class="btn btn-primary">Apply Filters</button>
+    <button type="submit" class="btn btn-primary">Apply</button>
     <a href="{% url 'admin_registrations' %}" class="btn btn-secondary">Clear</a>
   </form>
 
   <!-- Registrations Table -->
   <div class="data-table">
-    <div class="table-header">
-      <h2 class="table-title">All Registrations ({{ page_obj.paginator.count }})</h2>
-      <div class="table-header-actions">
-        <form method="post" action="{% url 'bulk_generate_participant_ids' %}" style="display: inline-block;" onsubmit="return confirm('Generate participant IDs for everyone who has Cohort and Dimension but no ID yet?');">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-secondary btn-sm" title="Generate IDs for existing registrations that don't have one yet">
-            <iconify-icon icon="lucide:hash"></iconify-icon>
-            Generate missing IDs
-          </button>
-        </form>
-        <a href="{% url 'download_registrations_template' %}" class="btn btn-secondary btn-sm" title="Download template to fill and import registrations">
-          <iconify-icon icon="lucide:file-down"></iconify-icon>
-          Template
-        </a>
-        <a href="{% url 'admin_import_registrations' %}" class="btn btn-secondary btn-sm" title="Upload CSV to register participants manually">
-          <iconify-icon icon="lucide:upload"></iconify-icon>
-          Import CSV
-        </a>
-        <a href="{% url 'admin_update_participant_ids_from_file' %}" class="btn btn-secondary btn-sm" title="Apply participant IDs from an official list (CSV or Excel)">
-          <iconify-icon icon="lucide:file-input"></iconify-icon>
-          Update IDs from file
-        </a>
-        <a href="{% url 'export_registrations' %}?{{ request.GET.urlencode }}" class="btn btn-secondary btn-sm" title="Export current list as CSV">
-          <iconify-icon icon="lucide:download"></iconify-icon>
-          Export CSV
-        </a>
-        <a href="{% url 'export_registrations_moodle' %}?{{ request.GET.urlencode }}" class="btn btn-secondary btn-sm" title="Export for Moodle bulk user upload (username, firstname, lastname, email, password, cohort)">
-          <iconify-icon icon="lucide:graduation-cap"></iconify-icon>
-          Export for Moodle
-        </a>
-        <a href="{% url 'add_registration' %}" class="btn btn-primary btn-sm">
+    <div class="table-header table-header-registrations">
+      <div class="table-header-top">
+        <h2 class="table-title">All Registrations ({{ page_obj.paginator.count }})</h2>
+        <a href="{% url 'add_registration' %}" class="btn btn-primary btn-sm btn-add-new">
           <iconify-icon icon="lucide:plus"></iconify-icon>
           Add New
         </a>
       </div>
-      <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Moodle export: username = participant ID (lowercase, no /). Password in Settings. In Moodle: Site administration → Users → Upload users → upload file and enable <strong>Force password change on first login</strong>. Use <code>cohort1</code> column to assign users to cohorts.</p>
+      <div class="reg-actions-row">
+        <div class="reg-actions-group">
+          <form method="post" action="{% url 'bulk_generate_participant_ids' %}" class="reg-action-form" onsubmit="return confirm('Generate participant IDs for everyone who has Cohort but no ID yet?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary btn-sm" title="Generate IDs for registrations missing one">
+              <iconify-icon icon="lucide:hash"></iconify-icon>
+              Generate missing IDs
+            </button>
+          </form>
+        </div>
+        <div class="reg-actions-group">
+          <a href="{% url 'download_registrations_template' %}" class="btn btn-outline btn-sm" title="Download CSV template">Template</a>
+          <a href="{% url 'admin_import_registrations' %}" class="btn btn-outline btn-sm" title="Upload CSV to create/update registrations">Import CSV</a>
+          <a href="{% url 'admin_update_participant_ids_from_file' %}" class="btn btn-outline btn-sm" title="Apply official participant ID list (CSV/Excel)">Update IDs from file</a>
+          <a href="{% url 'export_registrations' %}?{{ request.GET.urlencode }}" class="btn btn-outline btn-sm" title="Export list as CSV">Export CSV</a>
+          <a href="{% url 'export_registrations_moodle' %}?{{ request.GET.urlencode }}" class="btn btn-outline btn-sm" title="Export for Moodle user upload">Export for Moodle</a>
+        </div>
+        <details class="moodle-tip">
+          <summary>Moodle export help</summary>
+          <div class="moodle-tip-content">
+            <p><strong>Username</strong> = participant ID in lowercase, no slashes (e.g. <code>etaspirc1003</code>). <strong>Password</strong> is set in Settings.</p>
+            <p>In Moodle: <strong>Site administration → Users → Upload users</strong> → upload the file and enable <strong>Force password change on first login</strong>. Use the <code>cohort1</code> column to assign users to cohorts.</p>
+          </div>
+        </details>
+      </div>
     </div>
     <div class="table-content">
       <table>
@@ -224,25 +221,6 @@
     font-weight: 600;
     color: #1d1d1f;
   }
-  .payment-summary-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    align-items: center;
-    margin-bottom: 20px;
-    padding: 14px 20px;
-    background: #fff;
-    border: 1px solid #d2d2d7;
-    border-radius: 12px;
-    font-size: 14px;
-    color: #1d1d1f;
-  }
-  .payment-summary-bar .summary-item { white-space: nowrap; }
-  .payment-summary-bar .summary-item strong { margin-right: 2px; }
-  .summary-pending { color: #64748b; }
-  .summary-half { color: #ff6b35; }
-  .summary-full { color: #34c759; }
-  .summary-failed { color: #ef4444; }
   .badge-pending {
     background: #f1f5f9;
     color: #64748b;

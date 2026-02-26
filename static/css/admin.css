@@ -726,6 +726,16 @@
   font-size: var(--font-size-sm);
 }
 
+.btn-outline {
+  background: transparent;
+  color: hsl(var(--admin-foreground));
+  border: 1px solid hsl(var(--admin-border));
+}
+.btn-outline:hover {
+  background: hsl(var(--admin-muted));
+  border-color: hsl(var(--admin-border));
+}
+
 .btn-icon {
   padding: 8px;
   width: 36px;
@@ -875,6 +885,86 @@
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+/* Registrations list: clearer header layout */
+.table-header-registrations {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  padding: 20px 24px;
+}
+.table-header-registrations .table-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.table-header-registrations .table-title {
+  margin: 0;
+}
+.table-header-registrations .btn-add-new {
+  flex-shrink: 0;
+}
+.reg-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  row-gap: 12px;
+}
+.reg-actions-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.reg-action-form {
+  display: inline-block;
+}
+.moodle-tip {
+  font-size: var(--font-size-sm);
+  color: #64748b;
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(0, 113, 227, 0.06);
+  border: 1px solid rgba(0, 113, 227, 0.15);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 560px;
+}
+.moodle-tip summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: #0071e3;
+  list-style: none;
+  user-select: none;
+}
+.moodle-tip summary::-webkit-details-marker { display: none; }
+.moodle-tip summary::after {
+  content: ' ▶';
+  font-size: 10px;
+  opacity: 0.8;
+}
+.moodle-tip[open] summary::after {
+  content: ' ▼';
+}
+.moodle-tip-content {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 113, 227, 0.12);
+}
+.moodle-tip-content p {
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+.moodle-tip-content p:last-child { margin-bottom: 0; }
+.moodle-tip code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 .table-content {
@@ -1138,34 +1228,43 @@ tbody tr:hover {
 .payment-summary-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
-  padding: 14px 20px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
   background: #fff;
-  border: 1px solid #d2d2d7;
-  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
   font-size: 14px;
   color: #1d1d1f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
-.payment-summary-bar .summary-item { white-space: nowrap; }
-.payment-summary-bar .summary-item strong { margin-right: 2px; }
+.payment-summary-bar .summary-item {
+  white-space: nowrap;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 500;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+.payment-summary-bar .summary-item strong { margin-right: 4px; }
 .payment-summary-bar .summary-pending { color: #64748b; }
-.payment-summary-bar .summary-half { color: #ff6b35; }
-.payment-summary-bar .summary-full { color: #34c759; }
-.payment-summary-bar .summary-failed { color: #ef4444; }
+.payment-summary-bar .summary-half { color: #c2410c; background: #fff4f0; border-color: rgba(194, 65, 12, 0.2); }
+.payment-summary-bar .summary-full { color: #166534; background: #dcfce7; border-color: rgba(22, 101, 52, 0.2); }
+.payment-summary-bar .summary-failed { color: #b91c1c; background: #fee2e2; border-color: rgba(185, 28, 28, 0.2); }
 
 /* Filters */
 .filter-bar {
   background: hsl(var(--admin-card));
   border: 1px solid hsl(var(--admin-border));
-  border-radius: 16px;
-  padding: 20px 24px;
+  border-radius: 14px;
+  padding: 18px 22px;
   margin-bottom: 24px;
   display: flex;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
   align-items: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .filter-input {
@@ -1442,6 +1541,22 @@ tbody tr:hover {
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
+  }
+  .table-header-registrations .table-header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .table-header-registrations .reg-actions-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .table-header-registrations .reg-actions-group {
+    width: 100%;
+  }
+  .table-header-registrations .reg-actions-group .btn,
+  .table-header-registrations .reg-action-form .btn {
+    width: 100%;
+    justify-content: center;
   }
   
   .table-title {
