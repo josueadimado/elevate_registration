@@ -303,6 +303,11 @@ class ProgramSettings(models.Model):
     guardian_required_age = models.IntegerField(default=16, help_text="Age below which guardian info is required")
     maintenance_mode = models.BooleanField(default=False, help_text="Enable maintenance mode")
     maintenance_message = models.TextField(blank=True, null=True)
+    moodle_default_password = models.CharField(
+        max_length=128, blank=True, null=True,
+        default='TribeMentee@1#',
+        help_text="Default password for Moodle user export; users should be forced to change on first login."
+    )
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:

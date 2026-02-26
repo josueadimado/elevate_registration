@@ -286,6 +286,75 @@ def export_registrations(request):
             r.referral_source or '',
             r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
         ])
+        return response
+
+
+def _participant_id_to_moodle_username(participant_id):
+    """Convert participant ID to Moodle username: lowercase, no slashes. e.g. ET/ASPIR/C1/003 -> etaspirc1003."""
+    if not participant_id or not isinstance(participant_id, str):
+        return ''
+    return participant_id.strip().lower().replace('/', '')
+
+
+def _full_name_to_first_last(full_name):
+    """Split full name into (firstname, lastname). First word = firstname, rest = lastname."""
+    if not full_name or not isinstance(full_name, str):
+        return ('', '')
+    parts = full_name.strip().split()
+    if not parts:
+        return ('', '')
+    if len(parts) == 1:
+        return (parts[0], '')
+    return (parts[0], ' '.join(parts[1:]))
+
+
+@login_required
+def export_registrations_moodle(request):
+    """
+    Export registrations as a Moodle-ready CSV for bulk user upload.
+    Columns: username, firstname, lastname, email, password, cohort1
+    - username = participant ID in lowercase without slashes (e.g. etaspirc1003)
+    - password = default from ProgramSettings (TribeMentee@1#); in Moodle upload, enable "Force password change on first login"
+    - cohort1 = cohort code (C1/C2) so Moodle can assign users to cohorts in one go
+    Only includes registrations that have a participant_id and email.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+
+    registrations = _get_filtered_registrations_queryset(request)
+    registrations = registrations.filter(
+        participant_id__isnull=False
+    ).exclude(participant_id='').exclude(email='').select_related('cohort')
+
+    default_password = 'TribeMentee@1#'
+    try:
+        settings = ProgramSettings.load()
+        if getattr(settings, 'moodle_default_password', None):
+            default_password = settings.moodle_default_password
+    except Exception:
+        pass
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = (
+        'attachment; filename="moodle_users_%s.csv"' % timezone.now().strftime('%Y-%m-%d_%H-%M')
+    )
+    writer = csv.writer(response)
+    writer.writerow(['username', 'firstname', 'lastname', 'email', 'password', 'cohort1'])
+    for r in registrations:
+        username = _participant_id_to_moodle_username(r.participant_id)
+        if not username:
+            continue
+        firstname, lastname = _full_name_to_first_last(r.full_name or '')
+        cohort1 = (r.cohort.code if r.cohort else (r.cohort_code or '')).strip()
+        writer.writerow([
+            username,
+            firstname,
+            lastname,
+            r.email or '',
+            default_password,
+            cohort1,
+        ])
     return response
 
 

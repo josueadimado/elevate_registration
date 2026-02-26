@@ -267,7 +267,8 @@ class AdminEditProgramSettingsForm(forms.ModelForm):
             'group1_min_age', 'group1_max_age',
             'group2_min_age', 'group2_max_age',
             'guardian_required_age',
-            'maintenance_mode', 'maintenance_message'
+            'maintenance_mode', 'maintenance_message',
+            'moodle_default_password'
         ]
         widgets = {
             'site_name': forms.TextInput(attrs={
@@ -302,5 +303,10 @@ class AdminEditProgramSettingsForm(forms.ModelForm):
             'maintenance_message': forms.Textarea(attrs={
                 'class': 'admin-form-input',
                 'rows': 4
+            }),
+            'moodle_default_password': forms.TextInput(attrs={
+                'class': 'admin-form-input',
+                'placeholder': 'TribeMentee@1#',
+                'autocomplete': 'off'
             }),
         }
