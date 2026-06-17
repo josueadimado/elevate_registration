@@ -241,52 +241,94 @@ def _get_filtered_registrations_queryset(request):
     return registrations
 
 
+def _registration_payment_status_label(registration):
+    """Payment status label matching the registrations list table."""
+    if registration.status == 'FAILED':
+        return 'Failed'
+    if registration.registration_fee_paid and registration.course_fee_paid:
+        return 'Full paid'
+    if registration.registration_fee_paid:
+        return 'Half paid (reg)'
+    if registration.course_fee_paid:
+        return 'Half paid (course)'
+    return 'Pending'
+
+
+def _registration_amount_display(registration):
+    """Amount string matching the registrations list table."""
+    amount = registration.amount
+    if amount is None:
+        return ''
+    if registration.currency == 'NGN':
+        return '₦%s' % int(amount)
+    return '$%s' % int(amount)
+
+
 @login_required
 def export_registrations(request):
     """
     Export the registrations list as CSV, respecting current filters.
+    Columns match the list table: Name, Email, Cohort, Dimension, Participant ID, Amount, Status, Date.
+    Exports all rows matching filters (not only the current page).
+    Use ?full=1 for extended columns (phone, country, fees, etc.).
     """
     if not request.user.is_staff:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('admin_login')
     registrations = _get_filtered_registrations_queryset(request)
+    full_export = request.GET.get('full') == '1'
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = (
         'attachment; filename="registrations_%s.csv"' % timezone.now().strftime('%Y-%m-%d_%H-%M')
     )
     writer = csv.writer(response)
-    # Header row
-    writer.writerow([
-        'Name', 'Email', 'Phone', 'Country', 'Age', 'Group', 'Cohort', 'Dimension',
-        'Participant ID', 'Enrollment Type', 'Amount', 'Currency', 'Status', 'Registration Fee Paid',
-        'Course Fee Paid', 'Reference (Squad)', 'Reference (Paystack)', 'Guardian Name',
-        'Guardian Phone', 'Referral Source', 'Created At'
-    ])
-    for r in registrations:
+    if full_export:
         writer.writerow([
-            r.full_name or '',
-            r.email or '',
-            r.phone or '',
-            r.country or '',
-            r.age or '',
-            r.get_group_display() if r.group else '',
-            r.cohort.name if r.cohort else '',
-            r.dimension.name if r.dimension else (r.dimension_code or ''),
-            r.participant_id or '',
-            r.get_enrollment_type_display() if r.enrollment_type else '',
-            r.amount or '',
-            r.currency or '',
-            r.status or '',
-            'Yes' if r.registration_fee_paid else 'No',
-            'Yes' if r.course_fee_paid else 'No',
-            r.squad_reference or (r.paystack_reference or ''),
-            r.paystack_reference or '',
-            r.guardian_name or '',
-            r.guardian_phone or '',
-            r.referral_source or '',
-            r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
+            'Name', 'Email', 'Phone', 'Country', 'Age', 'Group', 'Cohort', 'Dimension',
+            'Participant ID', 'Enrollment Type', 'Amount', 'Currency', 'Status', 'Registration Fee Paid',
+            'Course Fee Paid', 'Reference (Squad)', 'Reference (Paystack)', 'Guardian Name',
+            'Guardian Phone', 'Referral Source', 'Created At'
         ])
-        return response
+        for r in registrations:
+            writer.writerow([
+                r.full_name or '',
+                r.email or '',
+                r.phone or '',
+                r.country or '',
+                r.age or '',
+                r.get_group_display() if r.group else '',
+                r.cohort.name if r.cohort else '',
+                r.dimension.name if r.dimension else (r.dimension_code or ''),
+                r.participant_id or '',
+                r.get_enrollment_type_display() if r.enrollment_type else '',
+                r.amount or '',
+                r.currency or '',
+                r.status or '',
+                'Yes' if r.registration_fee_paid else 'No',
+                'Yes' if r.course_fee_paid else 'No',
+                r.squad_reference or (r.paystack_reference or ''),
+                r.paystack_reference or '',
+                r.guardian_name or '',
+                r.guardian_phone or '',
+                r.referral_source or '',
+                r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
+            ])
+    else:
+        writer.writerow([
+            'Name', 'Email', 'Cohort', 'Dimension', 'Participant ID', 'Amount', 'Status', 'Date'
+        ])
+        for r in registrations:
+            writer.writerow([
+                r.full_name or '',
+                r.email or '',
+                r.cohort.name if r.cohort else '-',
+                r.dimension.code if r.dimension else (r.dimension_code or '-'),
+                r.participant_id or '',
+                _registration_amount_display(r),
+                _registration_payment_status_label(r),
+                r.created_at.strftime('%b %d, %Y') if r.created_at else '',
+            ])
+    return response
 
 
 def _participant_id_to_moodle_username(participant_id):
