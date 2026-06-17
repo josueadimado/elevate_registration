@@ -253,10 +253,20 @@ def _registration_payment_status_label(registration):
 
 
 def _registration_payment_fees_label(registration):
-    """Reg/Course fee paid summary for export."""
-    reg = 'Yes' if registration.registration_fee_paid else 'No'
-    course = 'Yes' if registration.course_fee_paid else 'No'
-    return 'Reg %s, Course %s' % (reg, course)
+    """Reg/Course fee paid summary for export (single column, legacy)."""
+    reg = 'Paid' if registration.registration_fee_paid else 'Not paid'
+    course = 'Paid' if registration.course_fee_paid else 'Not paid'
+    return 'Reg: %s; Course: %s' % (reg, course)
+
+
+def _registration_registration_fee_label(registration):
+    """Registration fee column — matches list (Reg ✓ / Reg ✗)."""
+    return 'Paid' if registration.registration_fee_paid else 'Not paid'
+
+
+def _registration_course_fee_label(registration):
+    """Course fee column — matches list (Course ✓ / Course ✗)."""
+    return 'Paid' if registration.course_fee_paid else 'Not paid'
 
 
 def _registration_amount_display(registration):
@@ -273,9 +283,10 @@ def _registration_amount_display(registration):
 def export_registrations(request):
     """
     Export the registrations list as CSV, respecting current filters.
-    Columns match the list table: Name, Email, Cohort, Dimension, Participant ID, Amount, Status, Date.
+    Default columns match the on-screen table, including payment breakdown:
+    Registration Fee, Course Fee, and Status (Full paid / Partial payment / Not paid).
     Exports all rows matching filters (not only the current page).
-    Use ?full=1 for extended columns (phone, country, fees, etc.).
+    Use ?full=1 for extended columns (phone, country, payment refs, etc.).
     """
     if not request.user.is_staff:
         messages.error(request, 'You do not have permission to access this page.')
@@ -290,8 +301,9 @@ def export_registrations(request):
     if full_export:
         writer.writerow([
             'Name', 'Email', 'Phone', 'Country', 'Age', 'Group', 'Cohort', 'Dimension',
-            'Participant ID', 'Enrollment Type', 'Amount', 'Currency', 'Status', 'Registration Fee Paid',
-            'Course Fee Paid', 'Reference (Squad)', 'Reference (Paystack)', 'Guardian Name',
+            'Participant ID', 'Enrollment Type', 'Amount', 'Currency',
+            'Registration Fee', 'Course Fee', 'Payment Status',
+            'System Status', 'Reference (Squad)', 'Reference (Paystack)', 'Guardian Name',
             'Guardian Phone', 'Referral Source', 'Created At'
         ])
         for r in registrations:
@@ -308,9 +320,10 @@ def export_registrations(request):
                 r.get_enrollment_type_display() if r.enrollment_type else '',
                 r.amount or '',
                 r.currency or '',
+                'Paid' if r.registration_fee_paid else 'Not paid',
+                'Paid' if r.course_fee_paid else 'Not paid',
+                _registration_payment_status_label(r),
                 r.status or '',
-                'Yes' if r.registration_fee_paid else 'No',
-                'Yes' if r.course_fee_paid else 'No',
                 r.squad_reference or (r.paystack_reference or ''),
                 r.paystack_reference or '',
                 r.guardian_name or '',
@@ -319,8 +332,10 @@ def export_registrations(request):
                 r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
             ])
     else:
+        # Same columns as the registrations list table (without Actions)
         writer.writerow([
-            'Name', 'Email', 'Cohort', 'Dimension', 'Participant ID', 'Amount', 'Payment (Reg/Course)', 'Status', 'Date'
+            'Name', 'Email', 'Cohort', 'Dimension', 'Participant ID', 'Amount',
+            'Registration Fee', 'Course Fee', 'Status', 'Date'
         ])
         for r in registrations:
             writer.writerow([
@@ -330,7 +345,8 @@ def export_registrations(request):
                 r.dimension.code if r.dimension else (r.dimension_code or '-'),
                 r.participant_id or '',
                 _registration_amount_display(r),
-                _registration_payment_fees_label(r),
+                _registration_registration_fee_label(r),
+                _registration_course_fee_label(r),
                 _registration_payment_status_label(r),
                 r.created_at.strftime('%b %d, %Y') if r.created_at else '',
             ])
