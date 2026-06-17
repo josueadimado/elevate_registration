@@ -247,11 +247,16 @@ def _registration_payment_status_label(registration):
         return 'Failed'
     if registration.registration_fee_paid and registration.course_fee_paid:
         return 'Full paid'
-    if registration.registration_fee_paid:
-        return 'Half paid (reg)'
-    if registration.course_fee_paid:
-        return 'Half paid (course)'
-    return 'Pending'
+    if registration.registration_fee_paid or registration.course_fee_paid:
+        return 'Partial payment'
+    return 'Not paid'
+
+
+def _registration_payment_fees_label(registration):
+    """Reg/Course fee paid summary for export."""
+    reg = 'Yes' if registration.registration_fee_paid else 'No'
+    course = 'Yes' if registration.course_fee_paid else 'No'
+    return 'Reg %s, Course %s' % (reg, course)
 
 
 def _registration_amount_display(registration):
@@ -315,7 +320,7 @@ def export_registrations(request):
             ])
     else:
         writer.writerow([
-            'Name', 'Email', 'Cohort', 'Dimension', 'Participant ID', 'Amount', 'Status', 'Date'
+            'Name', 'Email', 'Cohort', 'Dimension', 'Participant ID', 'Amount', 'Payment (Reg/Course)', 'Status', 'Date'
         ])
         for r in registrations:
             writer.writerow([
@@ -325,6 +330,7 @@ def export_registrations(request):
                 r.dimension.code if r.dimension else (r.dimension_code or '-'),
                 r.participant_id or '',
                 _registration_amount_display(r),
+                _registration_payment_fees_label(r),
                 _registration_payment_status_label(r),
                 r.created_at.strftime('%b %d, %Y') if r.created_at else '',
             ])

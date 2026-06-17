@@ -5,12 +5,25 @@
 
 {% block content %}
 <div class="fade-in-up">
-  <!-- Payment summary: clearer pills -->
+  <!-- Payment summary: click a pill to filter the list -->
   <div class="payment-summary-bar">
-    <span class="summary-item summary-pending"><strong>{{ count_pending }}</strong> pending</span>
-    <span class="summary-item summary-half"><strong>{{ count_half_paid }}</strong> half paid</span>
-    <span class="summary-item summary-full"><strong>{{ count_full_paid }}</strong> full paid</span>
-    {% if count_failed %}<span class="summary-item summary-failed"><strong>{{ count_failed }}</strong> failed</span>{% endif %}
+    <a href="{% url 'admin_registrations' %}?status=PENDING{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if cohort_filter %}&cohort={{ cohort_filter }}{% endif %}{% if dimension_filter %}&dimension={{ dimension_filter }}{% endif %}" class="summary-item summary-pending summary-filter-link{% if status_filter == 'PENDING' %} summary-active{% endif %}">
+      <strong>{{ count_pending }}</strong> not paid
+    </a>
+    <a href="{% url 'admin_registrations' %}?status=HALF{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if cohort_filter %}&cohort={{ cohort_filter }}{% endif %}{% if dimension_filter %}&dimension={{ dimension_filter }}{% endif %}" class="summary-item summary-half summary-filter-link{% if status_filter == 'HALF' %} summary-active{% endif %}">
+      <strong>{{ count_half_paid }}</strong> partial payment
+    </a>
+    <a href="{% url 'admin_registrations' %}?status=PAID{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if cohort_filter %}&cohort={{ cohort_filter }}{% endif %}{% if dimension_filter %}&dimension={{ dimension_filter }}{% endif %}" class="summary-item summary-full summary-filter-link{% if status_filter == 'PAID' %} summary-active{% endif %}">
+      <strong>{{ count_full_paid }}</strong> full paid
+    </a>
+    {% if count_failed %}
+    <a href="{% url 'admin_registrations' %}?status=FAILED{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if cohort_filter %}&cohort={{ cohort_filter }}{% endif %}{% if dimension_filter %}&dimension={{ dimension_filter }}{% endif %}" class="summary-item summary-failed summary-filter-link{% if status_filter == 'FAILED' %} summary-active{% endif %}">
+      <strong>{{ count_failed }}</strong> failed
+    </a>
+    {% endif %}
+    {% if status_filter %}
+    <a href="{% url 'admin_registrations' %}{% if search_query or cohort_filter or dimension_filter %}?{% endif %}{% if search_query %}search={{ search_query|urlencode }}{% endif %}{% if cohort_filter %}{% if search_query %}&{% endif %}cohort={{ cohort_filter }}{% endif %}{% if dimension_filter %}{% if search_query or cohort_filter %}&{% endif %}dimension={{ dimension_filter }}{% endif %}" class="summary-clear-filter">Show all</a>
+    {% endif %}
   </div>
   <!-- Filters -->
   <form method="get" class="filter-bar">
@@ -22,11 +35,11 @@
       name="search"
     >
     <select name="status" class="filter-select" onchange="this.form.submit()">
-      <option value="">All Status</option>
-      <option value="PAID" {% if status_filter == 'PAID' %}selected{% endif %}>Full paid</option>
-      <option value="HALF" {% if status_filter == 'HALF' %}selected{% endif %}>Half paid</option>
-      <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
-      <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
+      <option value="">All payment status</option>
+      <option value="PAID" {% if status_filter == 'PAID' %}selected{% endif %}>Full paid only</option>
+      <option value="HALF" {% if status_filter == 'HALF' %}selected{% endif %}>Partial payment only</option>
+      <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Not paid only</option>
+      <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed only</option>
     </select>
     <select name="cohort" class="filter-select" onchange="this.form.submit()">
       <option value="">All Cohorts</option>
@@ -95,6 +108,7 @@
             <th>Dimension</th>
             <th>Participant ID</th>
             <th>Amount</th>
+            <th>Payment</th>
             <th>Status</th>
             <th>Date</th>
             <th>Actions</th>
@@ -102,7 +116,7 @@
         </thead>
         <tbody>
           {% for registration in registrations %}
-          <tr>
+          <tr class="{% if registration.status == 'FAILED' %}tr-payment-failed{% elif registration.registration_fee_paid and registration.course_fee_paid %}tr-payment-full{% elif registration.registration_fee_paid or registration.course_fee_paid %}tr-payment-half{% else %}tr-payment-pending{% endif %}">
             <td data-label="Name" style="font-weight: 600;">{{ registration.full_name }}</td>
             <td data-label="Email">{{ registration.email }}</td>
             <td data-label="Cohort">
@@ -133,17 +147,25 @@
                 ${{ registration.amount|floatformat:0 }}
               {% endif %}
             </td>
+            <td data-label="Payment">
+              <div class="payment-fee-pills" title="Registration fee and course fee">
+                <span class="fee-pill {% if registration.registration_fee_paid %}fee-paid{% else %}fee-unpaid{% endif %}">
+                  Reg {% if registration.registration_fee_paid %}✓{% else %}✗{% endif %}
+                </span>
+                <span class="fee-pill {% if registration.course_fee_paid %}fee-paid{% else %}fee-unpaid{% endif %}">
+                  Course {% if registration.course_fee_paid %}✓{% else %}✗{% endif %}
+                </span>
+              </div>
+            </td>
             <td data-label="Status">
               {% if registration.status == 'FAILED' %}
                 <span class="badge badge-danger">Failed</span>
               {% elif registration.registration_fee_paid and registration.course_fee_paid %}
-                <span class="badge badge-success" style="background:#dcfce7;color:#166534;border:1px solid rgba(22,101,52,0.25);">Full paid</span>
-              {% elif registration.registration_fee_paid %}
-                <span class="badge badge-warning" title="Registration fee paid; course fee pending">Half paid (reg)</span>
-              {% elif registration.course_fee_paid %}
-                <span class="badge badge-warning" title="Course fee paid; registration fee pending">Half paid (course)</span>
+                <span class="badge badge-success badge-payment-full">Full paid</span>
+              {% elif registration.registration_fee_paid or registration.course_fee_paid %}
+                <span class="badge badge-warning badge-payment-partial" title="One fee paid, one still pending">Partial payment</span>
               {% else %}
-                <span class="badge badge-pending">Pending</span>
+                <span class="badge badge-pending badge-payment-none">Not paid</span>
               {% endif %}
             </td>
             <td data-label="Date">{{ registration.created_at|date:"M d, Y" }}</td>
@@ -166,7 +188,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="9" style="text-align: center; padding: 60px; color: #86868b;">
+            <td colspan="10" style="text-align: center; padding: 60px; color: #86868b;">
               <iconify-icon icon="lucide:inbox" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px;"></iconify-icon>
               <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No registrations found</div>
               <div>Try adjusting your filters</div>
@@ -251,5 +273,71 @@
     gap: 8px;
     align-items: center;
   }
+  /* Payment visibility on list rows */
+  .tr-payment-full { border-left: 4px solid #22c55e; }
+  .tr-payment-half { border-left: 4px solid #f97316; }
+  .tr-payment-pending { border-left: 4px solid #94a3b8; }
+  .tr-payment-failed { border-left: 4px solid #ef4444; }
+  tbody tr.tr-payment-full:hover { background: #f0fdf4 !important; }
+  tbody tr.tr-payment-half:hover { background: #fff7ed !important; }
+  tbody tr.tr-payment-pending:hover { background: #f8fafc !important; }
+  .payment-fee-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .fee-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .fee-pill.fee-paid {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid rgba(22, 101, 52, 0.25);
+  }
+  .fee-pill.fee-unpaid {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+  }
+  .badge-payment-full {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid rgba(22, 101, 52, 0.25) !important;
+  }
+  .badge-payment-partial {
+    background: #fff4f0 !important;
+    color: #c2410c !important;
+    border: 1px solid rgba(194, 65, 12, 0.25) !important;
+  }
+  .badge-payment-none {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  .summary-filter-link {
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .summary-filter-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  .summary-filter-link.summary-active {
+    outline: 2px solid #0071e3;
+    outline-offset: 2px;
+  }
+  .summary-clear-filter {
+    font-size: 13px;
+    color: #0071e3;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 12px;
+  }
+  .summary-clear-filter:hover { text-decoration: underline; }
 </style>
 {% endblock %}
