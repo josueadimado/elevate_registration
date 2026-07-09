@@ -30,7 +30,7 @@ def seed_programs_and_cohorts(apps, schema_editor):
             'description': 'Data Analytics program',
             'is_active': True,
             'display_order': 2,
-            'show_tribe_member_pricing': False,
+            'show_tribe_member_pricing': True,
         },
     )
 
@@ -82,6 +82,8 @@ def seed_programs_and_cohorts(apps, schema_editor):
             'is_active': True,
             'display_order': 1,
             'default_enrollment_type': 'NEW',
+            'tribe_member_registration_fee': Decimal('50'),
+            'tribe_member_course_fee': Decimal('100'),
         },
     )
 

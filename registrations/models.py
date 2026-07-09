@@ -228,7 +228,7 @@ class Program(models.Model):
     display_order = models.IntegerField(default=0)
     show_tribe_member_pricing = models.BooleanField(
         default=False,
-        help_text="Show Elevate Tribe member pricing option on registration (ASPIRE only)"
+        help_text="Show Elevate Tribe member pricing on registration (ASPIRE, Data Analytics, etc.)"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
