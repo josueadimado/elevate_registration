@@ -94,7 +94,7 @@ def seed_programs_and_cohorts(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registrations', '0009_add_moodle_default_password'),
+        ('registrations', '0011_alter_registration_participant_id'),
     ]
 
     operations = [
