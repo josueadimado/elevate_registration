@@ -92,18 +92,20 @@ def get_usd_to_ngn_rate_alternative():
 PARTICIPANT_ID_FORMAT = "ET/ASPIR/{cohort}/{seq:03d}"
 
 
-def format_participant_id_canonical(cohort_code, sequence):
+def format_participant_id_canonical(cohort_code, sequence, id_prefix='ASPIR'):
     """
     Return participant ID in canonical form: ET/ASPIR/C1/003.
     cohort_code: e.g. C1, C2 (will be uppercased).
     sequence: integer (1, 2, 3, ...); will be zero-padded to 3 digits.
+    id_prefix: program prefix e.g. ASPIR, DATA
     """
     c = str(cohort_code).strip().upper()
+    p = str(id_prefix).strip().upper() or 'ASPIR'
     try:
         seq = int(sequence)
     except (TypeError, ValueError):
         seq = 1
-    return f"ET/ASPIR/{c}/{seq:03d}"
+    return f"ET/{p}/{c}/{seq:03d}"
 
 
 def get_next_available_sequence(cohort_code):
@@ -178,7 +180,11 @@ def generate_participant_id(registration):
     if not cohort_code:
         return None
 
-    cohort_prefix = f"ET/ASPIR/{cohort_code}/"
+    id_prefix = 'ASPIR'
+    if registration.cohort.program_id and registration.cohort.program:
+        id_prefix = registration.cohort.program.id_prefix or 'ASPIR'
+
+    cohort_prefix = f"ET/{id_prefix}/{cohort_code}/"
 
     with transaction.atomic():
         Registration.objects.select_for_update().filter(
@@ -198,7 +204,7 @@ def generate_participant_id(registration):
             except (ValueError, IndexError):
                 pass
 
-        new_id = format_participant_id_canonical(cohort_code, next_seq)
+        new_id = format_participant_id_canonical(cohort_code, next_seq, id_prefix=id_prefix)
         registration.participant_id = new_id
         registration.save(update_fields=["participant_id"])
         logger.info(f"Generated participant_id {new_id} for registration {registration.id}")

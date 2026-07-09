@@ -51,10 +51,15 @@ class Registration(models.Model):
     age = models.IntegerField(validators=[MinValueValidator(10), MaxValueValidator(22)])
     
     # Program selection (now using ForeignKeys to admin-configured models)
+    program = models.ForeignKey('Program', on_delete=models.PROTECT, null=True, blank=True, related_name='registrations')
     group = models.CharField(max_length=2, choices=GROUP_CHOICES)
     cohort = models.ForeignKey('Cohort', on_delete=models.PROTECT, null=True, blank=True, related_name='registrations')
     dimension = models.ForeignKey('Dimension', on_delete=models.PROTECT, null=True, blank=True, related_name='registrations')
     enrollment_type = models.CharField(max_length=10, choices=ENROLLMENT_TYPE_CHOICES)
+    is_elevate_tribe_member = models.BooleanField(
+        default=False,
+        help_text="Elevate Tribe member — may use tribe member pricing when configured on cohort"
+    )
     
     # Legacy fields for backward compatibility
     cohort_code = models.CharField(max_length=2, blank=True, null=True)
@@ -101,11 +106,11 @@ class Registration(models.Model):
         return f"{self.full_name} - {dimension_name} - {self.status}"
     
     def calculate_amount(self):
-        """
-        Calculate the registration amount based on enrollment type.
-        New Learner: $150 ($50 registration + $100 course)
-        Returning Learner: $120 ($20 registration + $100 course)
-        """
+        """Calculate total from cohort pricing if set, else enrollment-type defaults."""
+        if self.cohort_id:
+            _, _, total = self.cohort.get_fees(is_tribe_member=self.is_elevate_tribe_member)
+            if total:
+                return float(total)
         if self.enrollment_type == 'NEW':
             return 150.00
         elif self.enrollment_type == 'RETURNING':
@@ -208,27 +213,115 @@ class PaymentActivity(models.Model):
         return f"{self.reference} – {self.get_status_display()} – ${self.amount}"
 
 
+class Program(models.Model):
+    """
+    A learning program (e.g. ASPIRE, Data Analytics). Each program has its own cohorts and pricing.
+    """
+    name = models.CharField(max_length=150, help_text="e.g. ASPIRE, Data Analytics")
+    slug = models.SlugField(max_length=50, unique=True, help_text="Short code e.g. aspire, data-analytics")
+    description = models.TextField(blank=True, null=True)
+    id_prefix = models.CharField(
+        max_length=20, default='ASPIR',
+        help_text="Used in participant IDs e.g. ET/ASPIR/C1/003"
+    )
+    is_active = models.BooleanField(default=True, help_text="Only active programs appear on the registration form")
+    display_order = models.IntegerField(default=0)
+    show_tribe_member_pricing = models.BooleanField(
+        default=False,
+        help_text="Show Elevate Tribe member pricing option on registration (ASPIRE only)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['display_order', 'name']
+        verbose_name = 'Program'
+        verbose_name_plural = 'Programs'
+
+    def __str__(self):
+        return self.name
+
+
 class Cohort(models.Model):
     """
-    Admin-configurable cohorts for the program.
+    Admin-configurable cohort within a program (e.g. ASPIRE Cohort 1 – Purpose Discovery).
     """
-    name = models.CharField(max_length=100, unique=True, help_text="e.g., Cohort 1, Cohort 2")
-    code = models.CharField(max_length=10, unique=True, help_text="e.g., C1, C2")
+    program = models.ForeignKey(
+        'Program', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='cohorts', help_text="Which program this cohort belongs to"
+    )
+    name = models.CharField(max_length=100, help_text="e.g. Cohort 1")
+    code = models.CharField(max_length=10, help_text="e.g. C1, C2, C3 (unique within program)")
+    track_name = models.CharField(
+        max_length=150, blank=True, default='',
+        help_text="Learning track e.g. Purpose Discovery, Spiritual Excellence"
+    )
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True, help_text="Only active cohorts appear in registration")
     is_new_intake = models.BooleanField(default=False, help_text="Is this a new intake cohort?")
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
+    display_order = models.IntegerField(default=0, help_text="Order within the program on registration form")
+    # Per-cohort pricing (shown on front-end registration)
+    registration_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Registration fee for this cohort (USD unless currency set)"
+    )
+    course_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Course fee for this cohort"
+    )
+    currency = models.CharField(max_length=3, default='USD', choices=[('USD', 'USD'), ('NGN', 'NGN')])
+    tribe_member_registration_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Optional: registration fee for Elevate Tribe members"
+    )
+    tribe_member_course_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Optional: course fee for Elevate Tribe members"
+    )
+    linked_dimension = models.ForeignKey(
+        'Dimension', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='cohorts', help_text="Optional dimension linked to this cohort"
+    )
+    default_enrollment_type = models.CharField(
+        max_length=10, blank=True, default='',
+        choices=[('', '—'), ('NEW', 'New Learner'), ('RETURNING', 'Returning Learner')],
+        help_text="Optional default enrollment type for this cohort"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['display_order', 'name']
         verbose_name = 'Cohort'
         verbose_name_plural = 'Cohorts'
-    
+        unique_together = [['program', 'code']]
+
     def __str__(self):
-        return f"{self.name} ({'Active' if self.is_active else 'Inactive'})"
+        label = self.display_label
+        return f"{label} ({'Active' if self.is_active else 'Inactive'})"
+
+    @property
+    def display_label(self):
+        """Label for registration dropdown e.g. Cohort 1 – Purpose Discovery."""
+        if self.track_name:
+            return f"{self.name} – {self.track_name}"
+        return self.name
+
+    @property
+    def total_amount(self):
+        return (self.registration_fee or 0) + (self.course_fee or 0)
+
+    def get_fees(self, is_tribe_member=False):
+        """Return (registration_fee, course_fee, total) for this cohort."""
+        if is_tribe_member and self.program and self.program.show_tribe_member_pricing:
+            reg = self.tribe_member_registration_fee if self.tribe_member_registration_fee is not None else self.registration_fee
+            course = self.tribe_member_course_fee if self.tribe_member_course_fee is not None else self.course_fee
+        else:
+            reg = self.registration_fee or 0
+            course = self.course_fee or 0
+        return reg, course, reg + course
 
 
 class Dimension(models.Model):
@@ -294,7 +387,7 @@ class ProgramSettings(models.Model):
     """
     General program settings managed by admin.
     """
-    site_name = models.CharField(max_length=200, default="ASPIR Mentorship Program")
+    site_name = models.CharField(max_length=200, default="ASPIRE Mentorship Program")
     site_tagline = models.CharField(max_length=300, default="A step-by-step journey to Purpose, Excellence & Leadership")
     group1_min_age = models.IntegerField(default=10, help_text="Minimum age for Group 1")
     group1_max_age = models.IntegerField(default=15, help_text="Maximum age for Group 1")

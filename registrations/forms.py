@@ -2,7 +2,7 @@
 Django forms for registration.
 """
 from django import forms
-from .models import Registration, Cohort, Dimension, PricingConfig, ProgramSettings
+from .models import Registration, Cohort, Dimension, PricingConfig, ProgramSettings, Program
 
 # Complete alphabetically sorted country list
 COUNTRIES = [
@@ -219,10 +219,16 @@ class RegistrationForm(forms.ModelForm):
         model = Registration
         fields = [
             'full_name', 'email', 'phone', 'country', 'age',
-            'group', 'cohort', 'dimension', 'enrollment_type',
+            'program', 'group', 'cohort', 'dimension', 'enrollment_type',
+            'is_elevate_tribe_member',
             'guardian_name', 'guardian_phone', 'referral_source',
             'website'  # honeypot
         ]
+        labels = {
+            'program': 'Program',
+            'cohort': 'Cohort',
+            'is_elevate_tribe_member': 'Elevate Tribe member',
+        }
         widgets = {
             'full_name': forms.TextInput(attrs={
                 'class': 'form-input',
@@ -252,9 +258,19 @@ class RegistrationForm(forms.ModelForm):
                 'class': 'form-input',
                 'style': 'cursor: pointer'
             }),
+            'program': forms.Select(attrs={
+                'class': 'form-input',
+                'style': 'cursor: pointer',
+                'id': 'id_program',
+            }),
             'cohort': forms.Select(attrs={
                 'class': 'form-input',
-                'style': 'cursor: pointer'
+                'style': 'cursor: pointer',
+                'id': 'id_cohort',
+            }),
+            'is_elevate_tribe_member': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox',
+                'id': 'id_is_elevate_tribe_member',
             }),
             'dimension': forms.HiddenInput(attrs={'id': 'id_dimension'}),
             'enrollment_type': forms.HiddenInput(attrs={'id': 'id_enrollment_type'}),
@@ -280,17 +296,36 @@ class RegistrationForm(forms.ModelForm):
         self.fields['guardian_name'].required = True
         self.fields['guardian_phone'].required = True
         self.fields['referral_source'].required = False
-        
-        # Set querysets for ForeignKey fields
-        self.fields['cohort'].queryset = Cohort.objects.filter(is_active=True)
-        
-        # Dimension and enrollment_type are auto-assigned based on cohort
-        # They are hidden fields that will be set in clean() method
+
+        self.fields['program'].queryset = Program.objects.filter(is_active=True).order_by('display_order', 'name')
+        self.fields['program'].required = True
+        self.fields['program'].empty_label = 'Select a program'
+
+        # Cohort options filtered by program in clean() and via JS on the front-end
+        selected_program_id = None
+        if self.data.get('program'):
+            selected_program_id = self.data.get('program')
+        elif self.instance and self.instance.program_id:
+            selected_program_id = self.instance.program_id
+
+        cohort_qs = Cohort.objects.filter(is_active=True).select_related('program')
+        if selected_program_id:
+            cohort_qs = cohort_qs.filter(program_id=selected_program_id)
+        else:
+            cohort_qs = cohort_qs.none()
+        self.fields['cohort'].queryset = cohort_qs.order_by('display_order', 'name')
         self.fields['cohort'].required = True
-        self.fields['dimension'].required = False  # Will be auto-assigned in clean()
+        self.fields['cohort'].empty_label = 'Select a cohort'
+
+        self.fields['dimension'].required = False
         self.fields['dimension'].widget = forms.HiddenInput()
-        self.fields['enrollment_type'].required = False  # Will be auto-assigned in clean()
+        self.fields['enrollment_type'].required = False
         self.fields['enrollment_type'].widget = forms.HiddenInput()
+
+        show_tribe = Program.objects.filter(is_active=True, show_tribe_member_pricing=True).exists()
+        self.fields['is_elevate_tribe_member'].required = False
+        if not show_tribe:
+            self.fields['is_elevate_tribe_member'].widget = forms.HiddenInput()
     
     def clean(self):
         """
@@ -315,62 +350,41 @@ class RegistrationForm(forms.ModelForm):
         if not guardian_phone:
             self.add_error('guardian_phone', 'Guardian phone is required.')
         
-        # Auto-assign dimension and enrollment_type based on cohort
+        # Program, cohort, pricing from admin-configured cohort
+        program = cleaned_data.get('program')
         cohort = cleaned_data.get('cohort')
+        is_tribe = cleaned_data.get('is_elevate_tribe_member', False)
+
+        if not program:
+            self.add_error('program', 'Please select a program.')
+            return cleaned_data
         if not cohort:
             self.add_error('cohort', 'Please select a cohort.')
             return cleaned_data
-        
-        if cohort:
-            # Get cohort code (C1 or C2)
-            cohort_code = cohort.code.upper()
-            
-            # Auto-assign dimension based on cohort
-            # Cohort 1 (C1) → Spiritual Growth (S)
-            # Cohort 2 (C2) → Academic Excellence (A)
-            if cohort_code == 'C1' or '1' in cohort_code:
-                dimension_code = 'S'
-                enrollment_type = 'RETURNING'
-            elif cohort_code == 'C2' or '2' in cohort_code:
-                dimension_code = 'A'
-                enrollment_type = 'NEW'
-            else:
-                # Fallback: try to determine from cohort name
-                cohort_name_lower = cohort.name.lower()
-                if 'cohort 1' in cohort_name_lower or '1' in cohort_name_lower:
-                    dimension_code = 'S'
-                    enrollment_type = 'RETURNING'
-                elif 'cohort 2' in cohort_name_lower or '2' in cohort_name_lower:
-                    dimension_code = 'A'
-                    enrollment_type = 'NEW'
-                else:
-                    self.add_error('cohort', 'Unable to determine dimension and enrollment type for this cohort.')
-                    return cleaned_data
-            
-            # Set dimension
-            try:
-                dimension = Dimension.objects.get(code=dimension_code, is_active=True)
-                cleaned_data['dimension'] = dimension
-                cleaned_data['dimension_code'] = dimension_code
-            except Dimension.DoesNotExist:
-                self.add_error('cohort', f'Dimension with code {dimension_code} not found.')
-                return cleaned_data
-            
-            # Set enrollment_type
-            cleaned_data['enrollment_type'] = enrollment_type
-            
-            # Auto-calculate amount from PricingConfig
-            try:
-                pricing_config = PricingConfig.objects.get(enrollment_type=enrollment_type, is_active=True)
-                cleaned_data['amount'] = pricing_config.total_amount
-            except PricingConfig.DoesNotExist:
-                self.add_error('cohort', f'Pricing configuration not found for enrollment type {enrollment_type}.')
-            
-            # Store cohort code for backward compatibility
-            cleaned_data['cohort_code'] = cohort.code
+        if cohort.program_id != program.id:
+            self.add_error('cohort', 'This cohort does not belong to the selected program.')
+
+        cleaned_data['program'] = program
+        cleaned_data['cohort_code'] = cohort.code
+
+        # Dimension from cohort link (optional)
+        if cohort.linked_dimension_id:
+            cleaned_data['dimension'] = cohort.linked_dimension
+            cleaned_data['dimension_code'] = cohort.linked_dimension.code
         else:
-            self.add_error('cohort', 'Cohort selection is required.')
-        
+            cleaned_data['dimension'] = None
+            cleaned_data['dimension_code'] = None
+
+        # Enrollment type from cohort default or NEW
+        enrollment_type = cohort.default_enrollment_type or 'NEW'
+        cleaned_data['enrollment_type'] = enrollment_type
+
+        reg_fee, course_fee, total = cohort.get_fees(is_tribe_member=is_tribe)
+        cleaned_data['amount'] = total
+        cleaned_data['registration_fee_amount'] = reg_fee
+        cleaned_data['course_fee_amount'] = course_fee
+        cleaned_data['currency'] = cohort.currency or 'USD'
+
         return cleaned_data
     
     def clean_age(self):

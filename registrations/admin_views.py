@@ -14,8 +14,8 @@ from django.conf import settings as django_settings
 from django.http import JsonResponse, HttpResponse
 from datetime import timedelta
 from .models import (
-    Registration, Transaction, PaymentActivity, Cohort, Dimension, 
-    PricingConfig, ProgramSettings
+    Registration, Transaction, PaymentActivity, Cohort, Dimension,
+    PricingConfig, ProgramSettings, Program
 )
 from .views import _registration_from_ref
 from .utils import generate_participant_id, parse_participant_id_to_canonical
@@ -27,7 +27,7 @@ from .emails import (
     send_participant_id_email,
 )
 from .admin_forms import (
-    AdminEditRegistrationForm, AdminEditCohortForm,
+    AdminEditRegistrationForm, AdminEditCohortForm, AdminEditProgramForm,
     AdminEditDimensionForm, AdminEditPricingForm,
     AdminEditProgramSettingsForm
 )
@@ -1153,12 +1153,14 @@ def admin_settings(request):
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('admin_login')
     
-    cohorts = Cohort.objects.all().order_by('-created_at')
+    cohorts = Cohort.objects.select_related('program').order_by('program__display_order', 'display_order', 'name')
+    programs = Program.objects.all().order_by('display_order', 'name')
     dimensions = Dimension.objects.all().order_by('display_order')
     pricing_configs = PricingConfig.objects.all()
     settings = ProgramSettings.load()
     
     context = {
+        'programs': programs,
         'cohorts': cohorts,
         'dimensions': dimensions,
         'pricing_configs': pricing_configs,
@@ -1446,6 +1448,64 @@ def add_registration(request):
     }
     
     return render(request, 'registrations/admin/edit_registration.html', context)
+
+
+@login_required
+def add_program(request):
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    if request.method == 'POST':
+        form = AdminEditProgramForm(request.POST)
+        if form.is_valid():
+            program = form.save()
+            messages.success(request, f'Program "{program.name}" has been created.')
+            return redirect('admin_settings')
+        messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditProgramForm()
+    return render(request, 'registrations/admin/edit_program.html', {
+        'form': form, 'page_title': 'Add Program',
+    })
+
+
+@login_required
+def edit_program(request, program_id):
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    program = get_object_or_404(Program, id=program_id)
+    if request.method == 'POST':
+        form = AdminEditProgramForm(request.POST, instance=program)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Program "{program.name}" has been updated.')
+            return redirect('admin_settings')
+        messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AdminEditProgramForm(instance=program)
+    return render(request, 'registrations/admin/edit_program.html', {
+        'form': form, 'program': program, 'page_title': 'Edit Program',
+    })
+
+
+@login_required
+def delete_program(request, program_id):
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('admin_login')
+    if request.method == 'POST':
+        try:
+            program = Program.objects.get(id=program_id)
+            if program.cohorts.exists():
+                messages.error(request, f'Cannot delete "{program.name}" — it still has cohorts. Remove or reassign cohorts first.')
+            else:
+                name = program.name
+                program.delete()
+                messages.success(request, f'Program "{name}" deleted.')
+        except Program.DoesNotExist:
+            messages.error(request, 'Program not found.')
+    return redirect('admin_settings')
 
 
 @login_required

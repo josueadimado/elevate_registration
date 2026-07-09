@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.db.models import Case, When, Value, IntegerField
 from .forms import RegistrationForm
 from .models import (
-    Registration, Cohort, Dimension, PricingConfig, ProgramSettings, PaymentActivity
+    Registration, Cohort, Dimension, PricingConfig, ProgramSettings, PaymentActivity, Program
 )
 from .utils import get_usd_to_ngn_rate, generate_participant_id
 from .emails import (
@@ -103,8 +103,10 @@ def register(request):
     """
     Registration form view.
     """
-    cohorts = Cohort.objects.filter(is_active=True).order_by('name')
-    # ASPIR order: A, S, P, I, R
+    programs = Program.objects.filter(is_active=True).order_by('display_order', 'name')
+    cohorts = Cohort.objects.filter(is_active=True).select_related('program').order_by(
+        'program__display_order', 'display_order', 'name'
+    )
     dimensions = Dimension.objects.filter(is_active=True).annotate(
         aspir_order=Case(
             When(code='A', then=Value(0)),
@@ -116,43 +118,32 @@ def register(request):
             output_field=IntegerField(),
         )
     ).order_by('aspir_order', 'code')
-    
-    # Get current pricing config (default to NEW enrollment type)
-    try:
-        pricing_config = PricingConfig.objects.get(enrollment_type='NEW', is_active=True)
-    except PricingConfig.DoesNotExist:
-        pricing_config = None
-    
-    # Get all pricing for JavaScript
-    all_pricing = {}
-    pricing_ngn = {}
+
+    site_settings = ProgramSettings.load()
+
+    # Cohort pricing for front-end JavaScript (per cohort id)
+    cohort_pricing = {}
+    for c in cohorts:
+        reg, course, total = c.get_fees(False)
+        tr, tc, tt = c.get_fees(True)
+        cohort_pricing[str(c.id)] = {
+            'program_id': c.program_id,
+            'label': c.display_label,
+            'code': c.code,
+            'registration_fee': float(reg),
+            'course_fee': float(course),
+            'total': float(total),
+            'tribe_registration_fee': float(tr),
+            'tribe_course_fee': float(tc),
+            'tribe_total': float(tt),
+            'dimension_id': c.linked_dimension_id,
+            'enrollment_type': c.default_enrollment_type or 'NEW',
+            'show_tribe': bool(c.program and c.program.show_tribe_member_pricing),
+        }
+
     exchange_rate = get_usd_to_ngn_rate()
-    
-    for p in PricingConfig.objects.filter(is_active=True):
-        all_pricing[p.enrollment_type] = {
-            'registration_fee': float(p.registration_fee),
-            'course_fee': float(p.course_fee),
-            'total': float(p.total_amount),
-        }
-        # Calculate NGN equivalents
-        pricing_ngn[p.enrollment_type] = {
-            'registration_fee': round(float(p.registration_fee) * exchange_rate, 0),
-            'course_fee': round(float(p.course_fee) * exchange_rate, 0),
-            'total': round(float(p.total_amount) * exchange_rate, 0),
-        }
-    
-    # Calculate current NGN amounts for display
-    if pricing_config:
-        current_reg_fee_ngn = round(float(pricing_config.registration_fee) * exchange_rate, 0)
-        current_course_fee_ngn = round(float(pricing_config.course_fee) * exchange_rate, 0)
-        current_total_ngn = round(float(pricing_config.total_amount) * exchange_rate, 0)
-    else:
-        current_reg_fee_ngn = 0
-        current_course_fee_ngn = 0
-        current_total_ngn = 0
-    
+
     if request.method == 'POST':
-        # If this email is already registered, send them to the payment page instead of creating a duplicate
         email = (request.POST.get('email') or '').strip()
         if email:
             existing = (
@@ -166,24 +157,43 @@ def register(request):
         form = RegistrationForm(request.POST)
         if form.is_valid():
             registration = form.save(commit=False)
-            # Calculate total amount
-            registration.amount = registration.calculate_amount()
+            registration.amount = form.cleaned_data.get('amount') or registration.calculate_amount()
+            registration.registration_fee_amount = form.cleaned_data.get('registration_fee_amount')
+            registration.course_fee_amount = form.cleaned_data.get('course_fee_amount')
+            registration.currency = form.cleaned_data.get('currency') or 'USD'
             registration.save()
             return redirect('success', reference=registration.squad_reference or registration.paystack_reference)
     else:
         form = RegistrationForm()
-    
+
+    # Default pricing display (first active cohort or fallback)
+    first_cohort = cohorts.first()
+    if first_cohort:
+        reg, course, total = first_cohort.get_fees(False)
+        pricing_config = type('Obj', (), {
+            'registration_fee': reg, 'course_fee': course, 'total_amount': total
+        })()
+        current_reg_fee_ngn = round(float(reg) * exchange_rate, 0)
+        current_course_fee_ngn = round(float(course) * exchange_rate, 0)
+        current_total_ngn = round(float(total) * exchange_rate, 0)
+    else:
+        pricing_config = None
+        current_reg_fee_ngn = current_course_fee_ngn = current_total_ngn = 0
+
     context = {
         'form': form,
+        'programs': programs,
         'cohorts': cohorts,
         'dimensions': dimensions,
+        'site_settings': site_settings,
+        'cohort_pricing': cohort_pricing,
+        'cohort_pricing_json': json.dumps(cohort_pricing),
         'pricing_config': pricing_config,
-        'all_pricing': all_pricing,
-        'pricing_ngn': pricing_ngn,
         'exchange_rate': exchange_rate,
         'current_reg_fee_ngn': current_reg_fee_ngn,
         'current_course_fee_ngn': current_course_fee_ngn,
         'current_total_ngn': current_total_ngn,
+        'show_tribe_pricing': programs.filter(show_tribe_member_pricing=True).exists(),
     }
     return render(request, 'registrations/register.html', context)
 
@@ -278,21 +288,10 @@ def initialize_payment(request):
         }, status=400)
     
     registration = form.save(commit=False)
-    registration.amount = registration.calculate_amount()
-    
-    # Get pricing config to save fee amounts
-    try:
-        pricing = PricingConfig.objects.get(
-            enrollment_type=registration.enrollment_type,
-            is_active=True
-        )
-        registration.registration_fee_amount = pricing.registration_fee
-        registration.course_fee_amount = pricing.course_fee
-    except PricingConfig.DoesNotExist:
-        # Fallback to default values
-        registration.registration_fee_amount = 50.00 if registration.enrollment_type == 'NEW' else 20.00
-        registration.course_fee_amount = 100.00
-    
+    registration.amount = form.cleaned_data.get('amount') or registration.calculate_amount()
+    registration.registration_fee_amount = form.cleaned_data.get('registration_fee_amount')
+    registration.course_fee_amount = form.cleaned_data.get('course_fee_amount')
+    registration.currency = form.cleaned_data.get('currency') or 'USD'
     registration.save()
     
     # Get payment option and gateway from form data (all payments in USD)

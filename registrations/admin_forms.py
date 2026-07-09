@@ -2,7 +2,7 @@
 Admin forms for editing models in the custom admin panel.
 """
 from django import forms
-from .models import Registration, Cohort, Dimension, PricingConfig, ProgramSettings
+from .models import Registration, Cohort, Dimension, PricingConfig, ProgramSettings, Program
 from .forms import COUNTRIES  # Import country list from forms.py
 
 
@@ -132,14 +132,40 @@ class AdminEditRegistrationForm(forms.ModelForm):
         self.fields['paystack_reference'].widget.attrs['readonly'] = True
 
 
+class AdminEditProgramForm(forms.ModelForm):
+    """Form for editing programs in admin panel."""
+    class Meta:
+        model = Program
+        fields = [
+            'name', 'slug', 'description', 'id_prefix', 'is_active',
+            'display_order', 'show_tribe_member_pricing',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'admin-form-input', 'placeholder': 'e.g. ASPIRE'}),
+            'slug': forms.TextInput(attrs={'class': 'admin-form-input', 'placeholder': 'e.g. aspire'}),
+            'description': forms.Textarea(attrs={'class': 'admin-form-input', 'rows': 3}),
+            'id_prefix': forms.TextInput(attrs={'class': 'admin-form-input', 'placeholder': 'e.g. ASPIR'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'admin-checkbox'}),
+            'display_order': forms.NumberInput(attrs={'class': 'admin-form-input', 'min': 0}),
+            'show_tribe_member_pricing': forms.CheckboxInput(attrs={'class': 'admin-checkbox'}),
+        }
+
+
 class AdminEditCohortForm(forms.ModelForm):
     """
     Form for editing cohorts in admin panel.
     """
     class Meta:
         model = Cohort
-        fields = ['name', 'code', 'description', 'is_active', 'is_new_intake', 'start_date', 'end_date']
+        fields = [
+            'program', 'name', 'code', 'track_name', 'description',
+            'registration_fee', 'course_fee', 'currency',
+            'tribe_member_registration_fee', 'tribe_member_course_fee',
+            'linked_dimension', 'default_enrollment_type',
+            'is_active', 'is_new_intake', 'display_order', 'start_date', 'end_date',
+        ]
         widgets = {
+            'program': forms.Select(attrs={'class': 'admin-form-input'}),
             'name': forms.TextInput(attrs={
                 'class': 'admin-form-input',
                 'placeholder': 'e.g., Cohort 1'
@@ -148,26 +174,36 @@ class AdminEditCohortForm(forms.ModelForm):
                 'class': 'admin-form-input',
                 'placeholder': 'e.g., C1'
             }),
+            'track_name': forms.TextInput(attrs={
+                'class': 'admin-form-input',
+                'placeholder': 'e.g., Purpose Discovery'
+            }),
             'description': forms.Textarea(attrs={
                 'class': 'admin-form-input',
                 'rows': 4,
                 'placeholder': 'Cohort description'
             }),
-            'is_active': forms.CheckboxInput(attrs={
-                'class': 'admin-checkbox'
-            }),
-            'is_new_intake': forms.CheckboxInput(attrs={
-                'class': 'admin-checkbox'
-            }),
-            'start_date': forms.DateInput(attrs={
-                'class': 'admin-form-input',
-                'type': 'date'
-            }),
-            'end_date': forms.DateInput(attrs={
-                'class': 'admin-form-input',
-                'type': 'date'
-            }),
+            'registration_fee': forms.NumberInput(attrs={'class': 'admin-form-input', 'step': '0.01', 'min': 0}),
+            'course_fee': forms.NumberInput(attrs={'class': 'admin-form-input', 'step': '0.01', 'min': 0}),
+            'currency': forms.Select(attrs={'class': 'admin-form-input'}),
+            'tribe_member_registration_fee': forms.NumberInput(attrs={'class': 'admin-form-input', 'step': '0.01', 'min': 0}),
+            'tribe_member_course_fee': forms.NumberInput(attrs={'class': 'admin-form-input', 'step': '0.01', 'min': 0}),
+            'linked_dimension': forms.Select(attrs={'class': 'admin-form-input'}),
+            'default_enrollment_type': forms.Select(attrs={'class': 'admin-form-input'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'admin-checkbox'}),
+            'is_new_intake': forms.CheckboxInput(attrs={'class': 'admin-checkbox'}),
+            'display_order': forms.NumberInput(attrs={'class': 'admin-form-input', 'min': 0}),
+            'start_date': forms.DateInput(attrs={'class': 'admin-form-input', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'admin-form-input', 'type': 'date'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['program'].queryset = Program.objects.all().order_by('display_order', 'name')
+        self.fields['linked_dimension'].queryset = Dimension.objects.all().order_by('display_order', 'code')
+        self.fields['linked_dimension'].required = False
+        self.fields['tribe_member_registration_fee'].required = False
+        self.fields['tribe_member_course_fee'].required = False
 
 
 class AdminEditDimensionForm(forms.ModelForm):

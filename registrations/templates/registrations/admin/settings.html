@@ -5,6 +5,46 @@
 
 {% block content %}
 <div class="fade-in-up settings-page">
+  <!-- Programs Section -->
+  <div class="data-table fade-in-up" style="margin-bottom: 32px;">
+    <div class="table-header">
+      <h2 class="table-title">Programs</h2>
+      <a href="{% url 'add_program' %}" class="btn btn-primary btn-sm">Add Program</a>
+    </div>
+    <div class="table-content">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Slug</th>
+            <th>ID prefix</th>
+            <th>Cohorts</th>
+            <th>Tribe pricing</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for program in programs %}
+          <tr>
+            <td style="font-weight: 600;">{{ program.name }}</td>
+            <td>{{ program.slug }}</td>
+            <td><code>ET/{{ program.id_prefix }}/…</code></td>
+            <td>{{ program.cohorts.count }}</td>
+            <td>{% if program.show_tribe_member_pricing %}Yes{% else %}—{% endif %}</td>
+            <td>{% if program.is_active %}<span class="badge badge-success" style="background:#dcfce7;color:#166534;">Active</span>{% else %}<span class="badge badge-danger">Inactive</span>{% endif %}</td>
+            <td>
+              <a href="{% url 'edit_program' program.id %}" class="action-btn action-btn-edit" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" style="text-align:center;padding:40px;color:#86868b;">No programs yet. <a href="{% url 'add_program' %}">Add ASPIRE</a></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Cohorts Section -->
   <div class="data-table fade-in-up" style="animation-delay: 0.1s; margin-bottom: 32px;">
     <div class="table-header">
@@ -18,34 +58,24 @@
       <table>
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Program</th>
+            <th>Cohort</th>
+            <th>Track</th>
             <th>Code</th>
-            <th>Type</th>
+            <th>Price</th>
             <th>Status</th>
-            <th>Start Date</th>
-            <th>End Date</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for cohort in cohorts %}
           <tr>
+            <td>{{ cohort.program.name|default:"—" }}</td>
             <td style="font-weight: 600;">{{ cohort.name }}</td>
-            <td>
-              <span class="badge badge-info" style="background: #dbeafe; color: #0071e3; border: 1px solid rgba(0, 113, 227, 0.2); font-weight: 600;">
-                {{ cohort.code }}
-              </span>
-            </td>
-            <td>{% if cohort.is_new_intake %}<span class="badge badge-success" style="background:#dcfce7;color:#166534;">New Intake</span>{% else %}<span class="badge">Returning</span>{% endif %}</td>
-            <td>
-              {% if cohort.is_active %}
-                <span class="badge badge-success" style="background:#dcfce7;color:#166534;">Active</span>
-              {% else %}
-                <span class="badge badge-danger">Inactive</span>
-              {% endif %}
-            </td>
-            <td>{{ cohort.start_date|default:"-" }}</td>
-            <td>{{ cohort.end_date|default:"-" }}</td>
+            <td>{{ cohort.track_name|default:"—" }}</td>
+            <td><span class="badge badge-info">{{ cohort.code }}</span></td>
+            <td style="font-weight: 600; color: #0071e3;">${{ cohort.total_amount|floatformat:0 }}</td>
+            <td>{% if cohort.is_active %}<span class="badge badge-success" style="background:#dcfce7;color:#166534;">Active</span>{% else %}<span class="badge badge-danger">Inactive</span>{% endif %}</td>
             <td>
               <div class="action-buttons">
                 <a href="{% url 'edit_cohort' cohort.id %}" class="action-btn action-btn-edit" title="Edit">
