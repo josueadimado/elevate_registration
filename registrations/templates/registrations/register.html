@@ -266,10 +266,13 @@
               </div>
 
               {% if show_tribe_pricing %}
-              <div class="form-group-modern" id="tribe-member-section" style="margin-bottom: 20px; padding: 16px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; display: none;">
-                <label class="checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: #374151;">
+              <div class="form-group-modern" id="tribe-member-section">
+                <label class="tribe-member-label" for="id_is_elevate_tribe_member">
                   {{ form.is_elevate_tribe_member }}
-                  <span>I am an Elevate Tribe member (special pricing may apply)</span>
+                  <span class="tribe-member-text">
+                    I am an Elevate Tribe member
+                    <span class="tribe-member-hint">Check this only if you are already in Elevate Tribe — special pricing may apply for ASPIRE.</span>
+                  </span>
                 </label>
               </div>
               {% else %}
@@ -488,7 +491,7 @@
   }
 
   /* Form Styling */
-  .form-group-modern input,
+  .form-group-modern input:not([type="checkbox"]):not([type="radio"]),
   .form-group-modern select,
   .form-group-modern textarea {
     width: 100%;
@@ -501,6 +504,49 @@
     background: white;
     transition: all 0.3s ease;
     font-family: 'Montserrat', sans-serif;
+  }
+
+  /* Tribe member checkbox — normal size, not stretched like text fields */
+  #tribe-member-section {
+    display: none;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+  }
+  #tribe-member-section.is-visible {
+    display: block;
+  }
+  #tribe-member-section .tribe-member-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    margin: 0;
+  }
+  #tribe-member-section input[type="checkbox"] {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px;
+    margin: 2px 0 0 0;
+    padding: 0 !important;
+    border-radius: 6px;
+    border: 2px solid #10b981;
+    accent-color: #10b981;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  #tribe-member-section .tribe-member-text {
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.5;
+  }
+  #tribe-member-section .tribe-member-hint {
+    display: block;
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 4px;
   }
   .form-group-modern label {
     font-size: 15px !important;
@@ -593,7 +639,7 @@
     background: #f3f4f6;
   }
 
-  .form-group-modern input:focus,
+  .form-group-modern input:not([type="checkbox"]):not([type="radio"]):focus,
   .form-group-modern select:focus,
   .form-group-modern textarea:focus {
     outline: none;
@@ -1590,7 +1636,7 @@
         return;
       }
       const show = programTribePricing[programSelect.value] === true;
-      tribeMemberSection.style.display = show ? 'block' : 'none';
+      tribeMemberSection.classList.toggle('is-visible', show);
       if (!show && tribeMemberCheckbox) {
         tribeMemberCheckbox.checked = false;
       }
