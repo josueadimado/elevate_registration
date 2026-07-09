@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registrations', '0009_add_moodle_default_password'),
+        ('registrations', '0010_merge_20260226_2205'),
     ]
 
     operations = [
