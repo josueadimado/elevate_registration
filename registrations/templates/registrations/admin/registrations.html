@@ -104,8 +104,9 @@
           <tr>
             <th>Name</th>
             <th>Email</th>
+            <th>Program</th>
             <th>Cohort</th>
-            <th>Dimension</th>
+            <th>Track / Dimension</th>
             <th>Participant ID</th>
             <th>Amount</th>
             <th>Payment</th>
@@ -119,18 +120,29 @@
           <tr class="{% if registration.status == 'FAILED' %}tr-payment-failed{% elif registration.registration_fee_paid and registration.course_fee_paid %}tr-payment-full{% elif registration.registration_fee_paid or registration.course_fee_paid %}tr-payment-half{% else %}tr-payment-pending{% endif %}">
             <td data-label="Name" style="font-weight: 600;">{{ registration.full_name }}</td>
             <td data-label="Email">{{ registration.email }}</td>
-            <td data-label="Cohort">
-              {% if registration.cohort %}
-                <span class="badge badge-info">{{ registration.cohort.name }}</span>
+            <td data-label="Program">
+              {% if registration.program %}
+                {{ registration.program.name }}
+              {% elif registration.cohort and registration.cohort.program %}
+                {{ registration.cohort.program.name }}
               {% else %}
-                -
+                —
               {% endif %}
             </td>
-            <td data-label="Dimension">
+            <td data-label="Cohort">
+              {% if registration.cohort %}
+                <span class="badge badge-info">{{ registration.cohort.display_label }}</span>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td data-label="Track / Dimension">
               {% if registration.dimension %}
                 <span class="badge badge-info">{{ registration.dimension.code }}</span>
+              {% elif registration.cohort and registration.cohort.track_name %}
+                <span style="color:#64748b;">{{ registration.cohort.track_name }}</span>
               {% else %}
-                -
+                —
               {% endif %}
             </td>
             <td data-label="Participant ID">
@@ -188,7 +200,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="10" style="text-align: center; padding: 60px; color: #86868b;">
+            <td colspan="11" style="text-align: center; padding: 60px; color: #86868b;">
               <iconify-icon icon="lucide:inbox" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px;"></iconify-icon>
               <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No registrations found</div>
               <div>Try adjusting your filters</div>

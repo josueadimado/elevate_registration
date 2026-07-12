@@ -209,7 +209,7 @@ def _get_filtered_registrations_queryset(request):
     Status filter: PAID (full), PENDING (no payment), HALF (half paid), FAILED.
     """
     registrations = Registration.objects.select_related(
-        'cohort', 'dimension'
+        'cohort', 'cohort__program', 'dimension', 'program'
     ).order_by('-created_at')
     status_filter = request.GET.get('status', '')
     cohort_filter = request.GET.get('cohort', '')
@@ -1180,7 +1180,7 @@ def view_registration(request, registration_id):
         return redirect('admin_login')
     
     registration = get_object_or_404(
-        Registration.objects.select_related('cohort', 'dimension'),
+        Registration.objects.select_related('cohort', 'cohort__program', 'dimension', 'program'),
         id=registration_id
     )
     
@@ -1256,7 +1256,7 @@ def generate_participant_id_view(request, registration_id):
         return redirect('view_registration', registration_id=registration_id)
 
     registration = get_object_or_404(
-        Registration.objects.select_related('cohort', 'dimension'),
+        Registration.objects.select_related('cohort', 'cohort__program', 'dimension', 'program'),
         id=registration_id
     )
     if not registration.cohort:
@@ -1286,7 +1286,7 @@ def send_participant_id_email_view(request, registration_id):
         return redirect('view_registration', registration_id=registration_id)
 
     registration = get_object_or_404(
-        Registration.objects.select_related('cohort', 'dimension'),
+        Registration.objects.select_related('cohort', 'cohort__program', 'dimension', 'program'),
         id=registration_id
     )
     had_id_before = bool(registration.participant_id)

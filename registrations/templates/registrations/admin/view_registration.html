@@ -68,7 +68,7 @@
           <span style="color: #64748b; font-size: 14px;">To export IDs, use <strong>Export CSV</strong> on the Registrations list (includes Participant ID column).</span>
         </div>
       {% else %}
-        <p style="margin: 0 0 16px 0; color: #64748b; font-size: 15px;">No participant ID yet. Generate it below, or it will be created when you save the registration in Edit (if Cohort and Dimension are set).</p>
+        <p style="margin: 0 0 16px 0; color: #64748b; font-size: 15px;">No participant ID yet. Generate it below, or it will be created when you save the registration in Edit (if Cohort is set). Dimension is not required for Data Analytics.</p>
         {% if registration.cohort %}
           <div style="display: flex; flex-wrap: wrap; gap: 12px;">
             <form method="post" action="{% url 'generate_participant_id' registration.id %}" style="display: inline-block;">
@@ -143,6 +143,19 @@
         </legend>
         <div class="form-grid">
           <div class="form-group">
+            <label>Program</label>
+            <div class="view-field">
+              {% if registration.program %}
+                <span class="badge badge-info">{{ registration.program.name }}</span>
+              {% elif registration.cohort and registration.cohort.program %}
+                <span class="badge badge-info">{{ registration.cohort.program.name }}</span>
+              {% else %}
+                <span style="color: #86868b;">—</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-group">
             <label>Group</label>
             <div class="view-field">
               <span class="badge badge-info">{{ registration.get_group_display }}</span>
@@ -153,20 +166,26 @@
             <label>Cohort</label>
             <div class="view-field">
               {% if registration.cohort %}
-                <span class="badge badge-info">{{ registration.cohort.name }}</span>
+                <span class="badge badge-info">{{ registration.cohort.display_label }}</span>
+                {% if registration.cohort.program %}
+                  <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ registration.cohort.program.name }} · {{ registration.cohort.code }}</div>
+                {% endif %}
               {% else %}
-                <span style="color: #86868b;">{{ registration.get_cohort_display|default:"-" }}</span>
+                <span style="color: #86868b;">{{ registration.cohort_code|default:"—" }}</span>
               {% endif %}
             </div>
           </div>
           
           <div class="form-group">
-            <label>Dimension</label>
+            <label>Dimension / Track</label>
             <div class="view-field">
               {% if registration.dimension %}
                 <span class="badge badge-info">{{ registration.dimension.code }}: {{ registration.dimension.name }}</span>
+              {% elif registration.cohort and registration.cohort.track_name %}
+                <span class="badge badge-info">{{ registration.cohort.track_name }}</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">No ASPIR dimension letter (normal for Data Analytics)</div>
               {% else %}
-                <span style="color: #86868b;">{{ registration.get_dimension_display|default:"-" }}</span>
+                <span style="color: #86868b;">— Not required for this program</span>
               {% endif %}
             </div>
           </div>
@@ -175,6 +194,17 @@
             <label>Enrollment Type</label>
             <div class="view-field">
               <span class="badge badge-info">{{ registration.get_enrollment_type_display }}</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Elevate Tribe member</label>
+            <div class="view-field">
+              {% if registration.is_elevate_tribe_member %}
+                <span class="badge badge-success" style="background:#dcfce7;color:#166534;">Yes</span>
+              {% else %}
+                <span style="color: #86868b;">No</span>
+              {% endif %}
             </div>
           </div>
         </div>

@@ -118,32 +118,42 @@ class Registration(models.Model):
         return 0.00
     
     def get_registration_fee(self):
-        """Get registration fee amount from PricingConfig"""
+        """Prefer stored fee, then cohort pricing, then PricingConfig fallback."""
+        if self.registration_fee_amount is not None:
+            return self.registration_fee_amount
+        if self.cohort_id:
+            reg, _, _ = self.cohort.get_fees(is_tribe_member=self.is_elevate_tribe_member)
+            if reg is not None:
+                return reg
         try:
             from .models import PricingConfig
             pricing = PricingConfig.objects.get(enrollment_type=self.enrollment_type, is_active=True)
             return pricing.registration_fee
         except PricingConfig.DoesNotExist:
-            # Fallback to default values
             return 50.00 if self.enrollment_type == 'NEW' else 20.00
     
     def get_course_fee(self):
-        """Get course fee amount from PricingConfig"""
+        """Prefer stored fee, then cohort pricing, then PricingConfig fallback."""
+        if self.course_fee_amount is not None:
+            return self.course_fee_amount
+        if self.cohort_id:
+            _, course, _ = self.cohort.get_fees(is_tribe_member=self.is_elevate_tribe_member)
+            if course is not None:
+                return course
         try:
             from .models import PricingConfig
             pricing = PricingConfig.objects.get(enrollment_type=self.enrollment_type, is_active=True)
             return pricing.course_fee
         except PricingConfig.DoesNotExist:
-            # Fallback to default value
             return 100.00
     
     def get_remaining_balance(self):
-        """Calculate remaining balance to be paid"""
+        """Calculate remaining balance from this registration's actual fees."""
         remaining = 0
         if not self.registration_fee_paid:
-            remaining += self.get_registration_fee()
+            remaining += float(self.get_registration_fee() or 0)
         if not self.course_fee_paid:
-            remaining += self.get_course_fee()
+            remaining += float(self.get_course_fee() or 0)
         return remaining
     
     def is_fully_paid(self):

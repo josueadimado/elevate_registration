@@ -293,6 +293,9 @@ def initialize_payment(request):
     registration.registration_fee_amount = form.cleaned_data.get('registration_fee_amount')
     registration.course_fee_amount = form.cleaned_data.get('course_fee_amount')
     registration.currency = form.cleaned_data.get('currency') or 'USD'
+    # Ensure program is stored (align with cohort if needed)
+    if not registration.program_id and registration.cohort_id and registration.cohort.program_id:
+        registration.program = registration.cohort.program
     registration.save()
     
     # Get payment option and gateway from form data (all payments in USD)

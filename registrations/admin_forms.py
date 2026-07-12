@@ -14,7 +14,8 @@ class AdminEditRegistrationForm(forms.ModelForm):
         model = Registration
         fields = [
             'full_name', 'email', 'phone', 'country', 'age',
-            'group', 'cohort', 'dimension', 'enrollment_type',
+            'program', 'group', 'cohort', 'dimension', 'enrollment_type',
+            'is_elevate_tribe_member',
             'guardian_name', 'guardian_phone', 'referral_source',
             'amount', 'currency', 'status', 'squad_reference', 'paystack_reference',
             'registration_fee_paid', 'course_fee_paid',
@@ -41,6 +42,9 @@ class AdminEditRegistrationForm(forms.ModelForm):
                 'min': '10',
                 'max': '22'
             }),
+            'program': forms.Select(attrs={
+                'class': 'admin-form-input',
+            }),
             'group': forms.Select(attrs={
                 'class': 'admin-form-input',
             }, choices=Registration.GROUP_CHOICES),
@@ -52,6 +56,9 @@ class AdminEditRegistrationForm(forms.ModelForm):
             }),
             'enrollment_type': forms.Select(attrs={
                 'class': 'admin-form-input',
+            }),
+            'is_elevate_tribe_member': forms.CheckboxInput(attrs={
+                'class': 'admin-form-checkbox',
             }),
             'currency': forms.Select(attrs={
                 'class': 'admin-form-input',
@@ -104,13 +111,16 @@ class AdminEditRegistrationForm(forms.ModelForm):
     def save(self, commit=True):
         # Keep status in sync with fee checkboxes (for offline payments)
         instance = super().save(commit=False)
+        # Keep program aligned with the selected cohort
+        if instance.cohort_id and instance.cohort and instance.cohort.program_id:
+            instance.program = instance.cohort.program
         if instance.registration_fee_paid and instance.course_fee_paid:
             instance.status = 'PAID'
         elif instance.registration_fee_paid or instance.course_fee_paid:
             instance.status = 'PENDING'
         if commit:
             instance.save()
-            # Auto-generate participant ID when cohort is set and ID is missing (dimension not in ID)
+            # Auto-generate participant ID when cohort is set (dimension not required)
             if instance.cohort and not instance.participant_id:
                 from .utils import generate_participant_id
                 generate_participant_id(instance)
@@ -118,18 +128,26 @@ class AdminEditRegistrationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set querysets for ForeignKey fields
-        self.fields['cohort'].queryset = Cohort.objects.all()
+        self.fields['program'].queryset = Program.objects.all().order_by('display_order', 'name')
+        self.fields['program'].required = False
+        self.fields['program'].empty_label = '— Select program —'
+        self.fields['cohort'].queryset = Cohort.objects.select_related('program').order_by(
+            'program__display_order', 'display_order', 'name'
+        )
+        self.fields['cohort'].label_from_instance = lambda obj: (
+            f"{obj.program.name} – {obj.display_label}" if obj.program_id else obj.display_label
+        )
         self.fields['dimension'].queryset = Dimension.objects.all()
-        # Set choices for select fields
+        self.fields['dimension'].required = False
+        self.fields['dimension'].empty_label = '— None (e.g. Data Analytics) —'
         self.fields['country'].choices = COUNTRIES
         self.fields['group'].choices = Registration.GROUP_CHOICES
         self.fields['enrollment_type'].choices = Registration.ENROLLMENT_TYPE_CHOICES
         self.fields['status'].choices = Registration.STATUS_CHOICES
         self.fields['currency'].choices = [('USD', 'USD'), ('NGN', 'NGN')]
-        # Make reference fields readonly
         self.fields['squad_reference'].widget.attrs['readonly'] = True
         self.fields['paystack_reference'].widget.attrs['readonly'] = True
+        self.fields['is_elevate_tribe_member'].required = False
 
 
 class AdminEditProgramForm(forms.ModelForm):
