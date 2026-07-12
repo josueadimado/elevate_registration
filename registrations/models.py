@@ -230,6 +230,10 @@ class Program(models.Model):
         default=False,
         help_text="Show Elevate Tribe member pricing on registration (ASPIRE, Data Analytics, etc.)"
     )
+    require_full_payment = models.BooleanField(
+        default=False,
+        help_text="If checked, students must pay the full fee now (no registration-fee-only option). Use for Data Analytics."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -139,6 +139,7 @@ def register(request):
             'dimension_id': c.linked_dimension_id,
             'enrollment_type': c.default_enrollment_type or 'NEW',
             'show_tribe': bool(c.program and c.program.show_tribe_member_pricing),
+            'require_full_payment': bool(c.program and c.program.require_full_payment),
         }
 
     exchange_rate = get_usd_to_ngn_rate()
@@ -298,6 +299,9 @@ def initialize_payment(request):
     body = _parse_body_json(request)
     payment_option = (body.get('payment_option') or request.POST.get('payment_option') or 'partial').lower()
     payment_option = 'full' if payment_option == 'full' else 'partial'
+    # Programs like Data Analytics require full payment — no registration-fee-only option
+    if registration.program_id and getattr(registration.program, 'require_full_payment', False):
+        payment_option = 'full'
     payment_gateway = (body.get('payment_gateway') or request.POST.get('payment_gateway') or 'squad').lower()
     
     # Determine payment amount and reference based on option (unique ref per attempt to avoid Duplicate Transaction Reference)
@@ -438,6 +442,8 @@ def pay_registration_fee(request, registration_id):
     body = _parse_body_json(request)
     payment_option = (body.get('payment_option') or request.POST.get('payment_option') or 'partial').lower()
     payment_option = 'full' if payment_option == 'full' else 'partial'
+    if registration.program_id and getattr(registration.program, 'require_full_payment', False):
+        payment_option = 'full'
     
     if payment_option == 'full':
         reference = _unique_ref("ASPIR-FULL-", str(registration.id))

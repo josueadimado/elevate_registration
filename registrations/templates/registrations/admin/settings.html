@@ -20,6 +20,7 @@
             <th>ID prefix</th>
             <th>Cohorts</th>
             <th>Tribe pricing</th>
+            <th>Full pay only</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -32,6 +33,7 @@
             <td><code>ET/{{ program.id_prefix }}/…</code></td>
             <td>{{ program.cohorts.count }}</td>
             <td>{% if program.show_tribe_member_pricing %}Yes{% else %}—{% endif %}</td>
+            <td>{% if program.require_full_payment %}Yes{% else %}—{% endif %}</td>
             <td>{% if program.is_active %}<span class="badge badge-success" style="background:#dcfce7;color:#166534;">Active</span>{% else %}<span class="badge badge-danger">Inactive</span>{% endif %}</td>
             <td>
               <a href="{% url 'edit_program' program.id %}" class="action-btn action-btn-edit" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>

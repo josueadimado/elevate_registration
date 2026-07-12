@@ -317,9 +317,10 @@
               </div>
               
               <!-- Payment Option Toggle -->
-              <div class="payment-options" style="background: rgba(139, 92, 246, 0.05); border: 2px solid rgba(139, 92, 246, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+              <div class="payment-options" id="payment-options-box" style="background: rgba(139, 92, 246, 0.05); border: 2px solid rgba(139, 92, 246, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                 <label style="display: block; font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 4px;">Payment option:</label>
-                <p style="font-size: 12px; color: #64748b; margin: 0 0 12px 0;">Choose to pay registration fee only (and course fee later) or the full amount now.</p>
+                <p id="payment-options-help" style="font-size: 12px; color: #64748b; margin: 0 0 12px 0;">Choose to pay registration fee only (and course fee later) or the full amount now.</p>
+                <p id="payment-options-full-only-help" style="display: none; font-size: 12px; color: #64748b; margin: 0 0 12px 0;">This program requires full payment before enrollment. Registration fee only is not available.</p>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                   <label class="payment-option-label" style="display: flex; align-items: center; gap: 10px; padding: 14px; background: rgba(139, 92, 246, 0.05); border: 2px solid #8b5cf6; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;" id="payment-option-partial-label">
                     <input type="radio" name="payment_option" id="payment-option-partial" value="partial" checked style="width: 18px; height: 18px; accent-color: #8b5cf6; cursor: pointer; flex-shrink: 0;">
@@ -1521,6 +1522,12 @@
       {% endfor %}
     };
 
+    const programRequireFullPayment = {
+      {% for program in programs %}
+      '{{ program.id }}': {{ program.require_full_payment|yesno:"true,false" }}{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    };
+
     let currentPricing = null;
 
     function getActivePricing() {
@@ -1640,6 +1647,32 @@
       if (!show && tribeMemberCheckbox) {
         tribeMemberCheckbox.checked = false;
       }
+    }
+
+    function updatePaymentModeForProgram() {
+      const requireFull = programSelect && programRequireFullPayment[programSelect.value] === true;
+      const partialLabel = document.getElementById('payment-option-partial-label');
+      const fullRadio = document.getElementById('payment-option-full');
+      const partialRadio = document.getElementById('payment-option-partial');
+      const helpBoth = document.getElementById('payment-options-help');
+      const helpFullOnly = document.getElementById('payment-options-full-only-help');
+
+      if (partialLabel) {
+        partialLabel.style.display = requireFull ? 'none' : 'flex';
+      }
+      if (helpBoth) {
+        helpBoth.style.display = requireFull ? 'none' : 'block';
+      }
+      if (helpFullOnly) {
+        helpFullOnly.style.display = requireFull ? 'block' : 'none';
+      }
+      if (requireFull && fullRadio) {
+        fullRadio.checked = true;
+        if (partialRadio) {
+          partialRadio.checked = false;
+        }
+      }
+      updatePaymentDisplay();
     }
     
     // Guardian fields are now always required for all registrations
@@ -1791,6 +1824,7 @@
       programSelect.addEventListener('change', function() {
         rebuildCohortOptions(programSelect.value);
         updateTribeMemberVisibility();
+        updatePaymentModeForProgram();
         applyCohortSelectionDefaults();
         updatePaymentDisplay();
       });
@@ -1798,6 +1832,7 @@
         rebuildCohortOptions(programSelect.value, cohortSelect ? cohortSelect.value : null);
       }
       updateTribeMemberVisibility();
+      updatePaymentModeForProgram();
     }
 
     if (tribeMemberCheckbox) {
@@ -1846,9 +1881,13 @@
 
         const formData = new FormData(form);
         
-        // Add payment option to form data
-        const paymentOption = document.querySelector('input[name="payment_option"]:checked')?.value || 'partial';
-        formData.set('payment_option', paymentOption);
+        // Programs that require full payment (e.g. Data Analytics)
+        if (programSelect && programRequireFullPayment[programSelect.value] === true) {
+          formData.set('payment_option', 'full');
+        } else {
+          const paymentOption = document.querySelector('input[name="payment_option"]:checked')?.value || 'partial';
+          formData.set('payment_option', paymentOption);
+        }
         const paymentGateway = document.querySelector('input[name="payment_gateway"]:checked')?.value || 'squad';
         formData.set('payment_gateway', paymentGateway);
         

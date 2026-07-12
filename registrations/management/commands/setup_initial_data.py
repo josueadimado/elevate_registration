@@ -55,6 +55,7 @@ class Command(BaseCommand):
                         'is_active': True,
                         'display_order': 2,
                         'show_tribe_member_pricing': True,
+                        'require_full_payment': True,
                     },
                 )
                 self.stdout.write(self.style.SUCCESS(f'✓ Programs ready: {aspire.name}, {data_analytics.name}'))

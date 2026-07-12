@@ -138,7 +138,7 @@ class AdminEditProgramForm(forms.ModelForm):
         model = Program
         fields = [
             'name', 'slug', 'description', 'id_prefix', 'is_active',
-            'display_order', 'show_tribe_member_pricing',
+            'display_order', 'show_tribe_member_pricing', 'require_full_payment',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'admin-form-input', 'placeholder': 'e.g. ASPIRE'}),
@@ -148,6 +148,7 @@ class AdminEditProgramForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'admin-checkbox'}),
             'display_order': forms.NumberInput(attrs={'class': 'admin-form-input', 'min': 0}),
             'show_tribe_member_pricing': forms.CheckboxInput(attrs={'class': 'admin-checkbox'}),
+            'require_full_payment': forms.CheckboxInput(attrs={'class': 'admin-checkbox'}),
         }
 
 
